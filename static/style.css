@@ -1,0 +1,114 @@
+:root {
+    --detail: #FF4B4B;
+    --bg-detail: #FFF0F0;
+    --secondary-text: #4B5563;
+    --hover-bg: rgba(75 85 99 / 7%);
+}
+
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+    letter-spacing: 0.025px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    text-decoration: none;
+    color: unset;
+}
+
+body {
+    background-color: rgb(249 250 251);
+    font-size: 15px;
+    width: 100vw;
+    height: 100vh;
+}
+
+h1{
+    font-size: 1.6rem;
+    font-weight: 500;
+}
+
+h2 {
+    font-size: 1.1rem;
+    font-weight: 400;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+
+    height: 8%;
+    width: 100%;
+
+    box-shadow: 0 0 1px 0 black;
+    border-bottom: 1px grey;
+    background-color: white;
+}
+
+.navbar-item {
+    border-radius: 5px;
+    padding: 0.4rem;
+
+    display: flex;
+    justify-content: space-evenly;
+    align-content: center;
+    align-items: center;
+}
+
+.navbar-choice {
+    width: 25%;
+    padding: 0.5rem 0.2rem;
+}
+
+.navbar-choice:hover {
+    cursor: pointer;
+}
+
+.selected {
+    color: var(--detail);
+    background-color: var(--bg-detail);
+}
+
+.unselected {
+    color: var(--secondary-text);
+    transition: 0.2s ease;
+}
+
+.unselected:hover {
+    color: black;
+    background-color: var(--hover-bg);
+}
+
+.background-red {
+    background-color: var(--detail);
+}
+
+.color-white{
+    color: white;
+}
+
+.left > div > i {
+    font-size: 1.5rem;
+}
+
+.right > a > i {
+    font-size: 1.2rem;
+}
+
+.left {
+    display: flex;
+    gap: 2%;
+    align-items: center;
+
+    width: 50%;
+    margin-left: 5%;
+}
+
+.right {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5%;
+    align-items: center;
+
+    width: 50%;
+    margin-right: 5%;
+}
