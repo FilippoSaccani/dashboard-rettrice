@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <title></title>
+        <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css')}}" />
+        <script type="importmap">
+            {
+                "imports": {
+                    "react": "https://esm.sh/react@19?dev",
+                    "react-dom/client": "https://esm.sh/react-dom@19/client?dev",
+                    "react-router-dom": "https://esm.sh/react-router-dom@7?dev",
+                    "react-router": "https://esm.sh/react-router@7?dev"
+                }
+            }
+        </script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script src="https://kit.fontawesome.com/18cb25cb8a.js" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script data-type="module" type="text/babel">
+            import React from "react"
+	        import {createRoot} from "react-dom/client";
+            import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+
+            function NavBar() {
+                function NavItem(props) {
+                    return (
+                        <Link className={"navbar-item navbar-choice " + ((props.title === props.name) ? "selected" : "unselected")} to={props.url}>
+                            {props.icon}
+                            <h2>{props.name}</h2>
+                        </Link>
+                    );
+                }
+
+                const PAGE_TITLES = {
+                    "/": "Rassegna stampa",
+                    "/social": "Social Media",
+                    "/admin": "Amministrazione"
+                };
+
+                const title = PAGE_TITLES[useLocation().pathname];
+                document.title = title;
+                return (
+                    <nav className="navbar">
+                        <div className="left">
+                            <div className="background-red navbar-item"><i className="fa-solid fa-chart-column color-white"></i></div>
+                            <h1>{title}</h1>
+                        </div>
+
+                        <div className="right">
+                            <NavItem name="Social Media" icon={<i className="fa-solid fa-chart-column"></i>} url="/social" title={title}/>
+                            <NavItem name="Rassegna stampa" icon={<i className="fa-regular fa-file-lines"></i>} url="/" title={title}/>
+                            <NavItem name="Amministrazione" icon={<i className="fa-solid fa-plus"></i>} url="/admin" title={title}/>
+                        </div>
+                    </nav>
+                )
+            }
+
+            function Social() {
+                function SocialChart(props) {
+                    return (
+                        <div className="background-white chart-container">
+                            <div className={"social-name " + (props.social)}>
+                                <i className="fa-brands fa-instagram"></i>
+                                <h3>{props.social}</h3>
+                            </div>
+
+
+                            <div className="chart">
+                                <img src="{{ url_for('static', filename='/images/time-line.png') }}" alt="chart" className="chart-img"/>
+                            </div>
+                        </div>
+                    )
+                }
+
+                return (
+                    <div className="content">
+                        <div className="container">
+                            <div>
+                                <h1>Social Media</h1>
+                                <h2>Panoramica delle performance sui social media</h2>
+                            </div>
+
+                            <div className="charts">
+                                <SocialChart social="Instagram"/>
+                                <SocialChart social="Facebook"/>
+                                <SocialChart social="Linkedin"/>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            function Admin() {
+                return (
+                    <div className="content"></div>
+                )
+            }
+
+            function Index() {
+                return (
+                    <div className="content"></div>
+                )
+            }
+
+            function App() {
+                return (
+                    <BrowserRouter>
+                        <NavBar/>
+                        <Routes>
+                            <Route path="/" element={<Index />}></Route>
+                            <Route path="/admin" element={<Admin />}></Route>
+                            <Route path="/social" element={<Social />}></Route>
+                        </Routes>
+                    </BrowserRouter>
+                )
+            }
+
+            const root = createRoot(document.getElementById("root"));
+            root.render(<App />);
+        </script>
+    </body>
+</html>
