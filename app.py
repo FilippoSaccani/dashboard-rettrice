@@ -9,6 +9,9 @@ app = flask.Flask(__name__)
 def root():  # put application's code here
     return flask.render_template('index.html')
 
+@app.route('/admin', methods=['POST'])
+def admin():
+    return flask.redirect('/admin')
 
 if __name__ == '__main__':
     app.run()
