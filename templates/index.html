@@ -46,6 +46,7 @@
         const [_, day, month, year] = match;
         return new Date(year, month - 1, day);
     }
+
     function useIsMobile() {
         const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
@@ -85,9 +86,7 @@
         return (
             <nav className="navbar">
                 <div className="left">
-                    <div className="background-red navbar-item"><i className="fa-solid fa-chart-column color-white"></i>
-                    </div>
-                    <h1><span>Social</span> Dashboard</h1>
+                    <img src="static/images/logo.png" alt="UNIMORE" className="logo"/>
                 </div>
 
                 <div className="right">
@@ -131,97 +130,34 @@
 
     function Social() {
         function Chart(props) {
-            const data = [
-                {
-                    data: new Date('2026-02-10'),
-                    followers: 400,
-                    interazioni: 2400,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-02-17'),
-                    followers: 278,
-                    interazioni: 3908,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-02-20'),
-                    followers: 200,
-                    interazioni: 9800,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-03-03'),
-                    followers: 300,
-                    interazioni: 4567,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-03-10'),
-                    followers: 189,
-                    interazioni: 4800,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-04-10'),
-                    followers: 400,
-                    interazioni: 2400,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-05-10'),
-                    followers: 400,
-                    interazioni: 2400,
-                    visualizzazioni: 4400,
-                },
-                {
-                    data: new Date('2026-07-17'),
-                    followers: 278,
-                    interazioni: 3908,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-08-20'),
-                    followers: 200,
-                    interazioni: 9800,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-09-03'),
-                    followers: 300,
-                    interazioni: 4567,
-                    visualizzazioni: 2400,
-                },
-                {
-                    data: new Date('2026-12-10'),
-                    followers: 189,
-                    interazioni: 4800,
-                    visualizzazioni: 1400,
-                },
-                {
-                    data: new Date('2027-03-10'),
-                    followers: 189,
-                    interazioni: 4800,
-                    visualizzazioni: 2400,
-                },
-            ];
+            const [data, setData] = React.useState([]);
 
             const formattedData = data.map(d => ({
                 ...d,
                 data: new Date(d.data).getTime()
             }));
 
+            React.useEffect(() => {
+                fetch(`/social/${props.social}`)
+                .then(res => res.json())
+                .then(data => setData(data.map(d => ({
+                    ...d,
+                    giorno: new Date(d.giorno).getTime()
+                }))))
+                .catch(err => console.error('Errore nel caricamento dei dati di ' + props.social + ': ' + err))
+            }, [props.social]);
+
             const seiMesiFa = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-            const startIndex = formattedData.findIndex(d => d.data >= seiMesiFa);
+            const startIndex = data.findIndex(d => d.data >= seiMesiFa);
 
             const [visibili, setVisibili] = React.useState({
-                followers: true,
+                follower: true,
                 interazioni: true,
                 visualizzazioni: true
             });
 
             const labels = {
-                followers: 'Followers',
+                follower: 'Follower',
                 interazioni: 'Interazioni',
                 visualizzazioni: 'Visualizzazioni'
             }
@@ -244,23 +180,23 @@
             return (
                 <div className="margin-top-1">
                     <div className="left">
-                        <Filter line="followers"/>
+                        <Filter line="follower"/>
                         <Filter line="visualizzazioni"/>
                         <Filter line="interazioni"/>
                     </div>
 
                     <div className="chart">
                         <ResponsiveContainer width="100%" height={400}>
-                            <LineChart data={formattedData}>
+                            <LineChart data={data}>
                                 <CartesianGrid/>
-                                <Line hide={!visibili.followers} dataKey="followers" stroke="red" name="Followers"
+                                <Line hide={!visibili.follower} dataKey="follower" stroke="red" name="Followers"
                                       strokeWidth={2} isAnimationActive={false}/>
                                 <Line hide={!visibili.interazioni} dataKey="interazioni" stroke="green"
                                       name="Interazioni" strokeWidth={2} isAnimationActive={false}/>
                                 <Line hide={!visibili.visualizzazioni} dataKey="visualizzazioni" stroke="blue"
                                       name="Visualizzazioni" strokeWidth={2} isAnimationActive={false}/>
                                 <XAxis
-                                    dataKey="data"
+                                    dataKey="giorno"
                                     scale="time"
                                     type="number"
                                     domain={['dataMin', 'dataMax']}
@@ -296,7 +232,7 @@
             return (
                 <div className="section">
                     <SocialSectionTitle social={props.social}/>
-                    <Chart/>
+                    <Chart social={props.social}/>
                 </div>
             )
         }
@@ -318,46 +254,75 @@
 
     function Admin() {
         function SocialForm(props) {
-            const dateRef = React.useRef(null);
+            const today = new Date().toISOString().split('T')[0];
+            const [message, setMessage] = React.useState(null);
+            const [error, setError] = React.useState(null);
 
-            React.useEffect(() => {
-                if (dateRef.current) {
-                    dateRef.current.valueAsDate = new Date();
+            const  sendForm = (e) => {
+                const URL = "/admin/social";
+                e.preventDefault();
+
+                try {
+                    fetch(URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            giorno: e.target.giorno.value,
+                            visualizzazioni: e.target.visualizzazioni.value,
+                            interazioni: e.target.interazioni.value,
+                            follower: e.target.follower.value,
+                            social: props.social
+                        })
+                    })
+                    .then(res => {
+                        if (res.ok) {
+                            setError("");
+                            setMessage("Dati inseriti correttamente");
+                        } else {
+                            setMessage("");
+                            setError(res.text());
+                        }
+                    })
+                } catch (err) {
+                    setMessage("");
+                    setError("Errore di connessione al server");
                 }
-            }, []);
+            }
 
             return (
                 <div className="section">
                     <SocialSectionTitle social={props.social}/>
                     <h4>Inserisci i dati giornalieri per {props.social}</h4>
 
-                    <form action="/admin" method="post" className="margin-top-1" name="adminForm" autoComplete="off">
+                    <form className="margin-top-1" name="adminForm" autoComplete="off" onSubmit={sendForm}>
                         <label>
                             DATA
-                            <input type="date" name="data" ref={dateRef} className="input date" required/>
+                            <input type="date" name="giorno" defaultValue={today} className="input date" required max={today}/>
                         </label>
 
                         <label>
                             VISUALIZZAZIONI
-                            <input type="number" name="visualizzazioni" defaultValue="0" min="0" className="input"
-                                   required/>
+                            <input type="number" name="visualizzazioni" defaultValue="0" min="0" className="input" required/>
                         </label>
 
                         <label>
                             INTERAZIONI
-                            <input type="number" name="interazioni" defaultValue="0" min="0" className="input"
-                                   required/>
+                            <input type="number" name="interazioni" defaultValue="0" min="0" className="input" required/>
                         </label>
 
                         <label>
                             NUOVI FOLLOWERS
-                            <input type="number" name="followers" defaultValue="0" className="input" required/>
+                            <input type="number" name="follower" defaultValue="0" className="input" required/>
                         </label>
 
                         <br/>
-                        <input type="hidden" name="social" value={props.social} required/>
-
-                        <input type="submit" value="Salva Dati" className={"submit pointer submit-" + props.social}/>
+                        <div className="submit-message">
+                            <input type="submit" value="Salva Dati" className={"submit pointer submit-" + props.social}/>
+                            {message && <p className="message">{message}</p>}
+                            {error && <p className="error">{error}</p>}
+                        </div>
                     </form>
                 </div>
             )
@@ -487,7 +452,7 @@
                 <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={formattedData}>
                         <CartesianGrid/>
-                        <Line dataKey="numero" stroke="var(--detail)" name="Numero rassegne" strokeWidth={2}/>
+                        <Line dataKey="numero" stroke="var(--detail)" name="Numero articoli" strokeWidth={2}/>
                         <XAxis
                             dataKey="data"
                             scale="time"
