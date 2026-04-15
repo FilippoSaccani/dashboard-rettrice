@@ -1,9 +1,11 @@
+import threading
+from datetime import datetime
+
 import flask
-from query import *
-from datetime import datetime, date
+
+from functions import *
 
 app = flask.Flask(__name__)
-
 
 @app.route('/')
 @app.route('/admin')
@@ -12,7 +14,7 @@ def root():
     return flask.render_template('index.html')
 
 @app.route('/admin/social', methods=['POST'])
-def admin_form():
+def form_social():
     dati = flask.request.json
 
     if dati['social'] not in [row['nome'] for row in get_social()]:
@@ -45,11 +47,45 @@ def admin_form():
     except Exception as e:
         return "Errore nell'archiviazione dei dati", 400
 
-
 @app.route('/social/<social_name>')
 def social(social_name):
     rows = get_dati(social_name)
     return flask.jsonify([dict(row) for row in rows])
+
+@app.route('/admin/rassegna', methods=['POST'])
+def rassegna_social():
+    try:
+        files = flask.request.files.getlist('files')
+
+        for file in files:
+            ok, errore = validate_filename(file.filename)
+
+            if not ok:
+                return errore, 400
+
+            data = date_from_pdf(file.filename)
+
+            if not data:
+                return "Errore sconosciuto nella data", 400
+
+            ok, errore = save_pdf(file, data)
+
+            if not ok:
+                return errore, 400
+
+            ok, errore = insert_rassegna(file.filename, data, 0)
+
+            if not ok:
+                return errore, 400
+
+            thread = threading.Thread(target=process_pdf, args=[file.filename])
+            thread.daemon = True
+            thread.start()
+
+        return 'ok', 200
+    except Exception as e:
+        print(e)
+        return "Errore nell'archiviazione dei dati", 400
 
 @app.route('/rassegne')
 def rassegne():
@@ -57,4 +93,4 @@ def rassegne():
     return flask.jsonify([dict(row) for row in rows])
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=51852)
+    app.run(host="0.0.0.0")

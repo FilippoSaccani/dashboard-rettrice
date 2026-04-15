@@ -20,8 +20,8 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://kit.fontawesome.com/18cb25cb8a.js" crossorigin="anonymous"></script>
 </head>
-<body>
-<div id="root"></div>
+<body class="bg-main">
+<div id="root" class="bg-main"></div>
 <script data-type="module" type="text/babel">
     import React from "react"
     import {createRoot} from "react-dom/client";
@@ -47,6 +47,10 @@
         return new Date(year, month - 1, day);
     }
 
+    const seiMesiFa = () => {
+        return Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
+    }
+
     function useIsMobile() {
         const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
@@ -69,7 +73,7 @@
 
             return (
                 <Link
-                    className={"navbar-item pointer navbar-choice " + ((title === props.label) ? "selected" : "unselected")}
+                    className={"width-fit flex-center transition rounded pointer gap-1 padding-05-1 " + ((title === props.label) ? "selected" : "unselected")}
                     to={props.url}>
                     {props.icon}
                     <h2>{props.name}</h2>
@@ -84,15 +88,15 @@
         };
 
         return (
-            <nav className="navbar">
-                <div className="left">
-                    <img src="static/images/logo.png" alt="UNIMORE" className="logo"/>
-                </div>
+            <nav className="navbar flex shadow width-100">
 
-                <div className="right">
-                    <NavItem name={<>Social <span>media</span></>} label="Social Media" icon={<i className="fa-solid fa-chart-column"></i>}
+                <img src="static/images/logo.png" alt="UNIMORE"/>
+
+
+                <div className="flex-center navbar-items gap-2">
+                    <NavItem name={<>Social <span id="media">media</span></>} label="Social Media" icon={<i className="fa-solid fa-chart-column"></i>}
                              url="/social"/>
-                    <NavItem name={<>Rassegna <span>stampa</span></>} label="Rassegna stampa"
+                    <NavItem name={<>Rassegna <span id="stampa">stampa</span></>} label="Rassegna stampa"
                              icon={<i className="fa-regular fa-file-lines"></i>} url="/"/>
                     <NavItem name="Amministrazione" label="Amministrazione" icon={<i className="fa-solid fa-plus"></i>}
                              url="/admin"/>
@@ -110,9 +114,9 @@
         )
     }
 
-    function SocialSectionTitle(props) {
+    function SocialTitle(props) {
         return (
-            <div className={"section-title social-name " + (props.social)}>
+            <div className={"width-fit flex-center rounded gap-1 padding-05-1 " + (props.social)}>
                 <i className={"fa-brands fa-" + (props.social.toLowerCase())}></i>
                 <h3>{props.social}</h3>
             </div>
@@ -121,8 +125,8 @@
 
     function SectionTitle(props) {
         return (
-            <div className="section-title">
-                <i className="fa-regular fa-file-lines color-red"></i>
+            <div className="width-fit flex-center rounded gap-1 padding-05-1">
+                <i className="fa-regular fa-file-lines color-primary"></i>
                 <h3>{props.title}</h3>
             </div>
         )
@@ -135,15 +139,19 @@
             React.useEffect(() => {
                 fetch(`/social/${props.social}`)
                 .then(res => res.json())
-                .then(data => setData(data.map(d => ({
-                    ...d,
-                    giorno: new Date(d.giorno).getTime()
-                }))))
+                .then(data => {
+                    setData(data.map(d => ({
+                        ...d,
+                        giorno: new Date(d.giorno).getTime()
+                    })));
+                })
                 .catch(err => console.error('Errore nel caricamento dei dati di ' + props.social + ': ' + err))
             }, [props.social]);
 
-            const seiMesiFa = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa);
+            const startIndex = React.useMemo(() => {
+                const idx = data.findIndex(d => d.giorno >= seiMesiFa());
+                return idx === -1 ? 0 : idx;
+            }, [data]);
 
             const [visibili, setVisibili] = React.useState({
                 follower: true,
@@ -165,7 +173,7 @@
 
             function Filter(props) {
                 return (
-                    <div className="section-title filter pointer " onClick={() => toggleLinea(props.line)}>
+                    <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 " onClick={() => toggleLinea(props.line)}>
                         <i className={"fa-solid " + (visibili[props.line] ? 'fa-minus' : 'fa-plus')}></i>
                         <p>{labels[props.line]}</p>
                     </div>
@@ -173,14 +181,14 @@
             }
 
             return (
-                <div className="margin-top-1">
-                    <div className="left">
+                <div className="flex-column gap-1">
+                    <div className="flex gap-1 filter">
                         <Filter line="follower"/>
                         <Filter line="visualizzazioni"/>
                         <Filter line="interazioni"/>
                     </div>
 
-                    <div className="chart">
+                    <div className="flex-column width-100">
                         <ResponsiveContainer width="100%" height={400}>
                             <LineChart data={data}>
                                 <CartesianGrid/>
@@ -202,6 +210,7 @@
                                     })}
                                 />
                                 <Brush
+                                    key={startIndex}
                                     dataKey="giorno"
                                     height={20}
                                     stroke="lightgray"
@@ -225,23 +234,21 @@
 
         function SocialChart(props) {
             return (
-                <div className="section">
-                    <SocialSectionTitle social={props.social}/>
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <SocialTitle social={props.social}/>
                     <Chart social={props.social}/>
                 </div>
             )
         }
 
         return (
-            <div className="content">
-                <div className="container">
-                    <Title title="Social Media" subtitle="Panoramica delle performance sui social media"/>
+            <div className="content flex-column gap-2 width-100">
+                <Title title="Social Media" subtitle="Panoramica delle performance sui social media"/>
 
-                    <div className="content-container">
-                        <SocialChart social="Instagram"/>
-                        <SocialChart social="Facebook"/>
-                        <SocialChart social="Linkedin"/>
-                    </div>
+                <div className="flex-column gap-2">
+                    <SocialChart social="Instagram"/>
+                    <SocialChart social="Facebook"/>
+                    <SocialChart social="Linkedin"/>
                 </div>
             </div>
         )
@@ -253,67 +260,73 @@
             const [message, setMessage] = React.useState(null);
             const [error, setError] = React.useState(null);
 
-            const  sendForm = (e) => {
+            const sendForm = (e) => {
                 e.preventDefault();
+                setError("");
+                setMessage("");
 
-                try {
-                    fetch("/admin/social", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            giorno: e.target.giorno.value,
-                            visualizzazioni: e.target.visualizzazioni.value,
-                            interazioni: e.target.interazioni.value,
-                            follower: e.target.follower.value,
-                            social: props.social
+
+                fetch("/admin/social", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        giorno: e.target.giorno.value,
+                        visualizzazioni: e.target.visualizzazioni.value,
+                        interazioni: e.target.interazioni.value,
+                        follower: e.target.follower.value,
+                        social: props.social
+                    })
+                })
+                .then(res => {
+                    if (res.ok) {
+                        setMessage("Dati inseriti correttamente");
+                    }
+                    else {
+                        res.text().then(text => {
+                            setError(text);
                         })
-                    })
-                    .then(res => {
-                        if (res.ok) {
-                            setError("");
-                            setMessage("Dati inseriti correttamente");
-                        } else {
-                            setMessage("");
-                            setError(res.text());
-                        }
-                    })
-                } catch (err) {
-                    setMessage("");
+                    }
+                })
+                .catch (err => {
                     setError("Errore di connessione al server");
-                }
+                })
+                .finally(() => {
+                    document.body.style.cursor = 'default';
+                });
             }
 
             return (
-                <div className="section">
-                    <SocialSectionTitle social={props.social}/>
-                    <h4>Inserisci i dati giornalieri per {props.social}</h4>
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <div className="flex-column gap-05">
+                        <SocialTitle social={props.social}/>
+                        <h4>Inserisci i dati giornalieri per {props.social}</h4>
+                    </div>
 
-                    <form className="margin-top-1" name="adminForm" autoComplete="off" onSubmit={sendForm}>
+                    <form name="adminForm" autoComplete="off" onSubmit={sendForm} className="flex-column gap-1">
                         <label>
                             DATA
-                            <input type="date" name="giorno" defaultValue={today} className="input date" required max={today}/>
+                            <input type="date" name="giorno" defaultValue={today} className="input date width-100 rounded" required max={today}/>
                         </label>
 
                         <label>
                             VISUALIZZAZIONI
-                            <input type="number" name="visualizzazioni" defaultValue="0" min="0" className="input" required/>
+                            <input type="number" name="visualizzazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
                         </label>
 
                         <label>
                             INTERAZIONI
-                            <input type="number" name="interazioni" defaultValue="0" min="0" className="input" required/>
+                            <input type="number" name="interazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
                         </label>
 
                         <label>
                             NUOVI FOLLOWERS
-                            <input type="number" name="follower" defaultValue="0" className="input" required/>
+                            <input type="number" name="follower" defaultValue="0" className="input width-100 rounded" required/>
                         </label>
 
-                        <br/>
-                        <div className="submit-message">
-                            <input type="submit" value="Salva Dati" className={"submit pointer submit-" + props.social}/>
+                        <div className="width-fit flex-center gap-1">
+                            <input type="submit" value="Salva Dati" className="submit pointer rounded padding-05-1" data-platform={props.social}/>
                             {message && <p className="message">{message}</p>}
                             {error && <p className="error">{error}</p>}
                         </div>
@@ -322,64 +335,144 @@
             )
         }
 
-        return (
-            <div className="content">
-                <div className="container">
-                    <Title title="Amministrazione" subtitle="Aggiungi dati social e carica rassegne stampa"/>
+        function RassegnaForm () {
+            const [message, setMessage] = React.useState(null);
+            const [error, setError] = React.useState(null);
 
-                    <div className="content-container">
-                        <SocialForm social="Instagram"/>
-                        <SocialForm social="Facebook"/>
-                        <SocialForm social="Linkedin"/>
-                    </div>
+            const [dragging, setDragging] = React.useState(false);
 
-                    <div className="content-container">
-                        <div className="section">
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setDragging(false);
+
+                e.target.files = Array.from(e.dataTransfer.files);
+                sendForm(e);
+            };
+
+            const handleChange = (e) => {
+                sendForm(e);
+            }
+
+            const sendForm = (e) => {
+                setMessage("");
+                setError("");
+
+                const formData = new FormData();
+                const files = e.target.files;
+
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                document.body.style.cursor = 'wait';
+
+                fetch("/admin/rassegna", {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => {
+                    if (res.ok) {
+                        setMessage("Dati inseriti correttamente");
+                    }
+                    else {
+                        res.text().then(text => {
+                            setError(text);
+                        });
+                    }
+                })
+                .catch (err => {
+                    setError("Errore di connessione al server");
+                })
+                .finally(() => {
+                    document.body.style.cursor = 'default';
+                });
+            }
+
+            return (
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <div>
+                        <div className="width-fit flex-center gap-1">
                             <SectionTitle title="Carica rassegna stampa"/>
-                            <h4>Carica un file pdf per estrarre automaticamente il numero di articoli</h4>
-
-                            <form encType="multipart/form-data" method="post">
-                                <label className="dropzone">
-                                    <input type="file" accept=".pdf"/>
-                                    <div className="dropzone-content">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
-                                             viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.5">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                            <polyline points="17 8 12 3 7 8"/>
-                                            <line x1="12" y1="3" x2="12" y2="15"/>
-                                        </svg>
-                                        <p className="dropzone-title">Trascina un file PDF qui</p>
-                                        <p className="dropzone-sub">oppure clicca per selezionare</p>
-                                        <p className="dropzone-hint">Solo file PDF • Max 50MB</p>
-                                    </div>
-                                </label>
-                            </form>
-
-                            <div className="grey-container">
-                                <p className="bold">Come funziona:</p>
-                                <ol>
-                                    <li>Carica un file PDF della rassegna stampa</li>
-                                    <li>Il sistema estrae automaticamente il numero di articoli</li>
-                                    <li>La data viene rilevata dal nome del file (es. "Unimore29052026.pdf")</li>
-                                    <li>Visualizza i risultati nella pagina Rassegna Stampa</li>
-                                </ol>
-                            </div>
+                            {message && <p className="message">{message}</p>}
+                            {error && <p className="error">{error}</p>}
                         </div>
+
+                        <h4>Carica un file pdf per estrarre automaticamente il numero di articoli</h4>
                     </div>
 
-                    <div className="content-container">
-                        <div className="section">
-                            <SectionTitle title="Elimina rassegna stampa"/>
-                            <h4>Inserisci il nome del file della rassegna che vuoi eliminare</h4>
+                    <form encType="multipart/form-data">
+                        <label
+                            className={`dropzone transition rounded flex-center width-100 pointer ${dragging ? "dragging" : ""}`}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}>
+                            <input type="file" accept=".pdf" multiple onChange={handleChange} hidden/>
+                            <div className="dropzone-content flex-center flex-column gap-05">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
+                                     viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <p className="dropzone-title">Trascina uno o più file PDF qui</p>
+                                <p className="dropzone-sub">oppure clicca per selezionare</p>
+                            </div>
+                        </label>
+                    </form>
 
-                            <form className="margin-top-1">
-                                <label>
-                                    NOME FILE
-                                    <input type="text" id="nomeFile" className="input"/>
-                                </label>
-                                <input type="submit" id="eliminaRassegna" value="Elimina"
-                                       className="submit pointer submit-Instagram"/>
-                            </form>
+                    <div className="rounded bg-main padding-1">
+                        <p className="bold">Come funziona:</p>
+                        <ol className="flex-column gap-05 padding-05-1">
+                            <li>Carica uno o più file PDF di rassegne stampa</li>
+                            <li>Il sistema estrae automaticamente il numero di articoli</li>
+                            <li>La data viene rilevata dal nome del file (es. "Unimore29052026.pdf")</li>
+                            <li>Visualizza i risultati nella pagina Rassegna Stampa</li>
+                        </ol>
+                    </div>
+                </div>
+            )
+        }
+
+        function ListItem(props) {
+            return (
+                <div className="flex-between transition flex-center rounded width-100 bg-main padding-05-1">
+                    <p>{props.name}</p>
+                    <p id="date-list-item">{DateFromPDF(props.name).toLocaleDateString('it-IT')}</p>
+                    <div className="flex gap-1">
+                        <a className="padding-1 transition flex-center pointer rounded unselected" href={`/static/pdfs/${props.name}`} download><i
+                            className="fa-solid fa-download"></i></a>
+                        <a className="padding-1 transition flex-center pointer rounded unselected" href={`/static/pdfs/${props.name}`} target="_blank"
+                           rel="noreferrer"><i
+                            className="fa-solid fa-eye"></i></a>
+                    </div>
+                </div>
+            )
+        }
+
+        return (
+            <div className="content flex-column gap-2 width-100">
+                <Title title="Amministrazione" subtitle="Aggiungi dati social e carica rassegne stampa"/>
+
+                <div className="flex-column gap-2">
+                    <SocialForm social="Instagram"/>
+                    <SocialForm social="Facebook"/>
+                    <SocialForm social="Linkedin"/>
+                </div>
+
+                <div className="flex-column gap-2">
+                    <RassegnaForm />
+                </div>
+
+                <div className="flex-column gap-2">
+                    <div className="section transition rounded shadow flex-column gap-1">
+                        <h3>Rassegne stampa caricate</h3>
+
+                        <div className="flex-center flex-column gap-1 width-100">
+                            <ListItem name="Unimore15032026.pdf"/>
+                            <ListItem name="Unimore15022026.pdf"/>
                         </div>
                     </div>
                 </div>
@@ -388,22 +481,6 @@
     }
 
     function Index() {
-        function ListItem(props) {
-            return (
-                <div className="list-item">
-                    <p>{props.name}</p>
-                    <p id="date-list-item">{DateFromPDF(props.name).toLocaleDateString('it-IT')}</p>
-                    <div className="file-button-container">
-                        <a className="file-button pointer" href={`/static/pdfs/${props.name}`} download><i
-                            className="fa-solid fa-download"></i></a>
-                        <a className="file-button pointer" href={`/static/pdfs/${props.name}`} target="_blank"
-                           rel="noreferrer"><i
-                            className="fa-solid fa-eye"></i></a>
-                    </div>
-                </div>
-            )
-        }
-
         function Chart() {
             const [data, setData] = React.useState([]);
 
@@ -419,8 +496,7 @@
                 console.log(data)
             }, []);
 
-            const seiMesiFa = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa);
+            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
 
             const isMobile = useIsMobile();
 
@@ -428,7 +504,7 @@
                 <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={data}>
                         <CartesianGrid/>
-                        <Line dataKey="numero_articoli" stroke="var(--detail)" name="Numero articoli" strokeWidth={2}/>
+                        <Line dataKey="numero_articoli" stroke="var(--color-primary)" name="Numero articoli" strokeWidth={2}  isAnimationActive={false}/>
                         <XAxis
                             dataKey="giorno"
                             scale="time"
@@ -461,37 +537,24 @@
         }
 
         return (
-            <div className="content">
-                <div className="container">
-                    <Title title="Rassegna stampa" subtitle="Gestione e analisi delle rassegne stampa"/>
+            <div className="content flex-column gap-2">
+                <Title title="Rassegna stampa" subtitle="Gestione e analisi delle rassegne stampa"/>
 
-                    <div className="content-container">
-                        <div className="section">
-                            <SectionTitle title="Numero di articoli"/>
+                <div className="flex-column gap-2">
+                    <div className="section transition rounded shadow flex-column gap-1">
+                        <SectionTitle title="Numero di articoli"/>
 
-                            <Chart/>
-                        </div>
+                        <Chart/>
                     </div>
+                </div>
 
-                    <div className="content-container">
-                        <div className="section width-100">
-                            <div className="section-title width-100">
-                                <i className="fa-solid fa-magnifying-glass color-red"></i>
-                                <input type="text" id="cerca"
-                                       placeholder="Cerca per nome o data es. ('Unimore' o '29 maggio') . . ."
-                                       className="width-100"/>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="content-container">
-                        <div className="section">
-                            <h3>Rassegne stampa caricate</h3><br/>
-
-                            <div className="content">
-                                <ListItem name="Unimore15032026.pdf"/>
-                                <ListItem name="Unimore15022026.pdf"/>
-                            </div>
+                <div className="flex-column gap-2">
+                    <div className="section transition rounded width-100 shadow flex-column gap-1">
+                        <div className="flex-center width-100 rounded gap-1 padding-05-1">
+                            <i className="fa-solid fa-magnifying-glass color-primary"></i>
+                            <input type="text" id="cerca"
+                                   placeholder="Cerca per nome o data es. ('Unimore' o '29 maggio') . . ."
+                                   className="width-100"/>
                         </div>
                     </div>
                 </div>
