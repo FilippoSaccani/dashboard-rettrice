@@ -8,7 +8,7 @@ app = flask.Flask(__name__)
 @app.route('/')
 @app.route('/admin')
 @app.route('/social')
-def root():  # put application's code here
+def root():
     return flask.render_template('index.html')
 
 @app.route('/admin/social', methods=['POST'])
@@ -49,6 +49,11 @@ def admin_form():
 @app.route('/social/<social_name>')
 def social(social_name):
     rows = get_dati(social_name)
+    return flask.jsonify([dict(row) for row in rows])
+
+@app.route('/rassegne')
+def rassegne():
+    rows = get_rassegne()
     return flask.jsonify([dict(row) for row in rows])
 
 if __name__ == '__main__':

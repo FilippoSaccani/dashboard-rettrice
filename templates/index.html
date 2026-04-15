@@ -132,11 +132,6 @@
         function Chart(props) {
             const [data, setData] = React.useState([]);
 
-            const formattedData = data.map(d => ({
-                ...d,
-                data: new Date(d.data).getTime()
-            }));
-
             React.useEffect(() => {
                 fetch(`/social/${props.social}`)
                 .then(res => res.json())
@@ -148,7 +143,7 @@
             }, [props.social]);
 
             const seiMesiFa = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-            const startIndex = data.findIndex(d => d.data >= seiMesiFa);
+            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa);
 
             const [visibili, setVisibili] = React.useState({
                 follower: true,
@@ -207,7 +202,7 @@
                                     })}
                                 />
                                 <Brush
-                                    dataKey="data"
+                                    dataKey="giorno"
                                     height={20}
                                     stroke="lightgray"
                                     travellerWidth={10}
@@ -259,11 +254,10 @@
             const [error, setError] = React.useState(null);
 
             const  sendForm = (e) => {
-                const URL = "/admin/social";
                 e.preventDefault();
 
                 try {
-                    fetch(URL, {
+                    fetch("/admin/social", {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -366,7 +360,7 @@
                                 <ol>
                                     <li>Carica un file PDF della rassegna stampa</li>
                                     <li>Il sistema estrae automaticamente il numero di articoli</li>
-                                    <li>La data viene rilevata dal nome del file (es. "Unimore29052026.pdf"</li>
+                                    <li>La data viene rilevata dal nome del file (es. "Unimore29052026.pdf")</li>
                                     <li>Visualizza i risultati nella pagina Rassegna Stampa</li>
                                 </ol>
                             </div>
@@ -411,50 +405,32 @@
         }
 
         function Chart() {
-            const data = [
-                {
-                    data: new Date('2026-02-10'),
-                    numero: 400,
-                },
-                {
-                    data: new Date('2026-02-17'),
-                    numero: 278,
-                },
-                {
-                    data: new Date('2026-02-20'),
-                    numero: 200,
-                },
-                {
-                    data: new Date('2026-03-03'),
-                    numero: 300,
-                },
-                {
-                    data: new Date('2026-03-10'),
-                    numero: 189,
-                },
-                {
-                    data: new Date('2027-03-10'),
-                    numero: 189,
-                },
-            ];
+            const [data, setData] = React.useState([]);
 
-            const formattedData = data.map(d => ({
-                ...d,
-                data: new Date(d.data).getTime()
-            }));
+            React.useEffect(() => {
+                fetch('/rassegne')
+                .then(res =>res.json())
+                .then(data => setData(data.map(d => ({
+                    ...d,
+                    giorno: new Date(d.giorno).getTime()
+                }))))
+                .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+
+                console.log(data)
+            }, []);
 
             const seiMesiFa = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-            const startIndex = formattedData.findIndex(d => d.data >= seiMesiFa);
+            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa);
 
             const isMobile = useIsMobile();
 
             return (
                 <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={formattedData}>
+                    <LineChart data={data}>
                         <CartesianGrid/>
-                        <Line dataKey="numero" stroke="var(--detail)" name="Numero articoli" strokeWidth={2}/>
+                        <Line dataKey="numero_articoli" stroke="var(--detail)" name="Numero articoli" strokeWidth={2}/>
                         <XAxis
-                            dataKey="data"
+                            dataKey="giorno"
                             scale="time"
                             type="number"
                             domain={['dataMin', 'dataMax']}
@@ -465,7 +441,7 @@
                             })}
                         />
                         <Brush
-                            dataKey="data"
+                            dataKey="giorno"
                             height={20}
                             stroke="lightgray"
                             travellerWidth={10}

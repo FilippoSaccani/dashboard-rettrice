@@ -39,6 +39,9 @@ cursor.executescript('''
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-06-12', 120, 234, 101, 'Linkedin');
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-07-12', 23, 34, 56, 'Linkedin');
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-08-12', 56, 78, 98, 'Linkedin');
+
+    INSERT INTO rassegna VALUES ('Unimore20260812.txt', '2026-08-12', 42);
+    INSERT INTO rassegna VALUES ('Unimore20250812.txt', '2025-08-12', 30);
 ''')
 
 conn.commit()
