@@ -3,7 +3,6 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
-    <title></title>
     <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
     <script type="importmap">
         {
@@ -26,47 +25,42 @@
     import React from "react"
     import {createRoot} from "react-dom/client";
     import {BrowserRouter, Routes, Route, Link, useLocation} from "react-router-dom";
-    import {
-        Line,
-        LineChart,
-        ResponsiveContainer,
-        CartesianGrid,
-        Legend,
-        XAxis,
-        YAxis,
-        Label,
-        Tooltip,
-        Brush
-    } from 'recharts';
-
-    const DateFromPDF = (filename) => {
-        const match = filename.match(/(\d{2})(\d{2})(\d{4})/);
-        if (!match) return null;
-
-        const [_, day, month, year] = match;
-        return new Date(year, month - 1, day);
-    }
+    import { Line, LineChart, ResponsiveContainer, CartesianGrid, Legend, XAxis, YAxis, Tooltip, Brush } from 'recharts';
 
     const seiMesiFa = () => {
         return Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
     }
 
     function useIsMobile() {
-        const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+        const [isMobile, setIsMobile] = React.useState(() => {
+            if (typeof window === "undefined") return false;
+            return window.innerWidth <= 768;
+        });
 
         React.useEffect(() => {
-            const handleResize = () => {
-                setIsMobile(window.innerWidth < 768);
-            };
+            function handleResize() {
+              setIsMobile(window.innerWidth <= 768);
+            }
 
             window.addEventListener("resize", handleResize);
-            return () => window.removeEventListener("resize", handleResize);
-        }, []);
 
-        return isMobile;
+            handleResize();
+
+            return () => {
+              window.removeEventListener("resize", handleResize);
+            };
+          }, []);
+
+          return isMobile;
     }
 
     function NavBar() {
+        const PAGE_TITLES = {
+            "/": "Rassegna stampa",
+            "/social": "Social Media",
+            "/admin": "Amministrazione"
+        };
+
         function NavItem(props) {
             const title = PAGE_TITLES[useLocation().pathname];
             document.title = title;
@@ -81,25 +75,14 @@
             );
         }
 
-        const PAGE_TITLES = {
-            "/": "Rassegna stampa",
-            "/social": "Social Media",
-            "/admin": "Amministrazione"
-        };
-
         return (
             <nav className="navbar flex shadow width-100">
-
                 <img src="static/images/logo.png" alt="UNIMORE"/>
 
-
-                <div className="flex-center navbar-items gap-2">
-                    <NavItem name={<>Social <span id="media">media</span></>} label="Social Media" icon={<i className="fa-solid fa-chart-column"></i>}
-                             url="/social"/>
-                    <NavItem name={<>Rassegna <span id="stampa">stampa</span></>} label="Rassegna stampa"
-                             icon={<i className="fa-regular fa-file-lines"></i>} url="/"/>
-                    <NavItem name="Amministrazione" label="Amministrazione" icon={<i className="fa-solid fa-plus"></i>}
-                             url="/admin"/>
+                <div className="flex-center gap-2">
+                    <NavItem name={<>Social <span id="media">media</span></>} label="Social Media" icon={<i className="fa-solid fa-chart-column"></i>}  url="/social"/>
+                    <NavItem name={<>Rassegna <span id="stampa">stampa</span></>} label="Rassegna stampa" icon={<i className="fa-regular fa-file-lines"></i>} url="/"/>
+                    <NavItem name="Amministrazione" label="Amministrazione" icon={<i className="fa-solid fa-plus"></i>} url="/admin"/>
                 </div>
             </nav>
         )
@@ -126,7 +109,7 @@
     function SectionTitle(props) {
         return (
             <div className="width-fit flex-center rounded gap-1 padding-05-1">
-                <i className="fa-regular fa-file-lines color-primary"></i>
+                <i className={"color-primary " + props.i}></i>
                 <h3>{props.title}</h3>
             </div>
         )
@@ -135,23 +118,6 @@
     function Social() {
         function Chart(props) {
             const [data, setData] = React.useState([]);
-
-            React.useEffect(() => {
-                fetch(`/social/${props.social}`)
-                .then(res => res.json())
-                .then(data => {
-                    setData(data.map(d => ({
-                        ...d,
-                        giorno: new Date(d.giorno).getTime()
-                    })));
-                })
-                .catch(err => console.error('Errore nel caricamento dei dati di ' + props.social + ': ' + err))
-            }, [props.social]);
-
-            const startIndex = React.useMemo(() => {
-                const idx = data.findIndex(d => d.giorno >= seiMesiFa());
-                return idx === -1 ? 0 : idx;
-            }, [data]);
 
             const [visibili, setVisibili] = React.useState({
                 follower: true,
@@ -165,15 +131,31 @@
                 visualizzazioni: 'Visualizzazioni'
             }
 
+            React.useEffect(() => {
+                fetch(`/social/${props.social}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        setData(data.map(d => ({
+                            ...d,
+                            giorno: new Date(d.giorno).getTime()
+                        })));
+                    })
+                    .catch(err => console.error('Errore nel caricamento dei dati di ' + props.social + ': ' + err))
+            }, [props.social]);
+
+            const startIndex = React.useMemo(() => {
+                const idx = data.findIndex(d => d.giorno >= seiMesiFa());
+                return idx === -1 ? 0 : idx;
+            }, [data]);
+
             const toggleLinea = (linea) => {
                 setVisibili(prev => ({...prev, [linea]: !prev[linea]}));
             };
 
-            const isMobile = useIsMobile();
-
             function Filter(props) {
                 return (
-                    <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 " onClick={() => toggleLinea(props.line)}>
+                    <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "
+                         onClick={() => toggleLinea(props.line)}>
                         <i className={"fa-solid " + (visibili[props.line] ? 'fa-minus' : 'fa-plus')}></i>
                         <p>{labels[props.line]}</p>
                     </div>
@@ -188,46 +170,44 @@
                         <Filter line="interazioni"/>
                     </div>
 
-                    <div className="flex-column width-100">
-                        <ResponsiveContainer width="100%" height={400}>
-                            <LineChart data={data}>
-                                <CartesianGrid/>
-                                <Line hide={!visibili.follower} dataKey="follower" stroke="red" name="Followers"
-                                      strokeWidth={2} isAnimationActive={false}/>
-                                <Line hide={!visibili.interazioni} dataKey="interazioni" stroke="green"
-                                      name="Interazioni" strokeWidth={2} isAnimationActive={false}/>
-                                <Line hide={!visibili.visualizzazioni} dataKey="visualizzazioni" stroke="blue"
-                                      name="Visualizzazioni" strokeWidth={2} isAnimationActive={false}/>
-                                <XAxis
-                                    dataKey="giorno"
-                                    scale="time"
-                                    type="number"
-                                    domain={['dataMin', 'dataMax']}
-                                    tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric'
-                                    })}
-                                />
-                                <Brush
-                                    key={startIndex}
-                                    dataKey="giorno"
-                                    height={20}
-                                    stroke="lightgray"
-                                    travellerWidth={10}
-                                    startIndex={startIndex === -1 ? 0 : startIndex}
-                                    tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric'
-                                    })}
-                                />
-                                {!isMobile && <YAxis/>}
-                                <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
-                                <Legend align="right"/>
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <LineChart data={data} responsive>
+                            <CartesianGrid/>
+                            <Line hide={!visibili.follower} dataKey="follower" stroke="red" name="Followers"
+                                  strokeWidth={2} isAnimationActive={false}/>
+                            <Line hide={!visibili.interazioni} dataKey="interazioni" stroke="green"
+                                  name="Interazioni" strokeWidth={2} isAnimationActive={false}/>
+                            <Line hide={!visibili.visualizzazioni} dataKey="visualizzazioni" stroke="blue"
+                                  name="Visualizzazioni" strokeWidth={2} isAnimationActive={false}/>
+                            <XAxis
+                                dataKey="giorno"
+                                scale="time"
+                                type="ParseInt"
+                                domain={['dataMin', 'dataMax']}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <Brush
+                                key={startIndex}
+                                dataKey="giorno"
+                                height={20}
+                                stroke="lightgray"
+                                travellerWidth={10}
+                                startIndex={startIndex}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <YAxis mirror={useIsMobile()} />
+                            <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
+                            <Legend align="right"/>
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
             );
         }
@@ -255,8 +235,12 @@
     }
 
     function Admin() {
+        const timeout = 15000;
+        const refreshRef = React.useRef(null);
+
+        const today = new Date().toISOString().split('T')[0];
+
         function SocialForm(props) {
-            const today = new Date().toISOString().split('T')[0];
             const [message, setMessage] = React.useState(null);
             const [error, setError] = React.useState(null);
 
@@ -265,8 +249,7 @@
                 setError("");
                 setMessage("");
 
-
-                fetch("/admin/social", {
+                fetch("/admin/add-dati-social", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -279,22 +262,31 @@
                         social: props.social
                     })
                 })
-                .then(res => {
-                    if (res.ok) {
-                        setMessage("Dati inseriti correttamente");
-                    }
-                    else {
-                        res.text().then(text => {
-                            setError(text);
-                        })
-                    }
-                })
-                .catch (err => {
-                    setError("Errore di connessione al server");
-                })
-                .finally(() => {
-                    document.body.style.cursor = 'default';
-                });
+                    .then(res => {
+                        if (res.ok) {
+                            setMessage("Dati inseriti correttamente");
+                            setTimeout(() => {
+                                setMessage("")
+                            }, timeout)
+                            refreshRef.current?.();
+                        } else {
+                            res.text().then(text => {
+                                setError(text);
+                                setTimeout(() => {
+                                    setError("")
+                                }, timeout)
+                            })
+                        }
+                    })
+                    .catch(err => {
+                        setError("Errore di connessione al server");
+                        setTimeout(() => {
+                            setError("")
+                        }, timeout)
+                    })
+                    .finally(() => {
+                        document.body.style.cursor = 'default';
+                    });
             }
 
             return (
@@ -305,24 +297,20 @@
                     </div>
 
                     <form name="adminForm" autoComplete="off" onSubmit={sendForm} className="flex-column gap-1">
-                        <label>
-                            DATA
-                            <input type="date" name="giorno" defaultValue={today} className="input date width-100 rounded" required max={today}/>
+                        <label> DATA
+                            <input type="date" name="giorno" defaultValue={today} className="input width-100 rounded" required max={today}/>
                         </label>
 
-                        <label>
-                            VISUALIZZAZIONI
-                            <input type="number" name="visualizzazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
+                        <label> VISUALIZZAZIONI
+                            <input type="ParseInt" name="visualizzazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
                         </label>
 
-                        <label>
-                            INTERAZIONI
-                            <input type="number" name="interazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
+                        <label> INTERAZIONI
+                            <input type="ParseInt" name="interazioni" defaultValue="0" min="0" className="input width-100 rounded" required/>
                         </label>
 
-                        <label>
-                            NUOVI FOLLOWERS
-                            <input type="number" name="follower" defaultValue="0" className="input width-100 rounded" required/>
+                        <label> NUOVI FOLLOWERS
+                            <input type="ParseInt" name="follower" defaultValue="0" className="input width-100 rounded" required/>
                         </label>
 
                         <div className="width-fit flex-center gap-1">
@@ -335,81 +323,76 @@
             )
         }
 
-        function RassegnaForm () {
+        function RassegnaForm() {
             const [message, setMessage] = React.useState(null);
             const [error, setError] = React.useState(null);
+            const [file, setFile] = React.useState(null);
 
-            const [dragging, setDragging] = React.useState(false);
-
-            const handleDragOver = (e) => {
-                e.preventDefault();
+            const handleFiles = (files) => {
+                if (files.length > 0) {
+                    setFile(files[0]);
+                }
             };
 
             const handleDrop = (e) => {
                 e.preventDefault();
-                setDragging(false);
-
-                e.target.files = Array.from(e.dataTransfer.files);
-                sendForm(e);
+                handleFiles(e.dataTransfer.files);
             };
 
             const handleChange = (e) => {
-                sendForm(e);
-            }
+                handleFiles(e.target.files);
+            };
 
             const sendForm = (e) => {
+                e.preventDefault();
+
                 setMessage("");
                 setError("");
 
-                const formData = new FormData();
-                const files = e.target.files;
+                const formData = new FormData(e.target);
 
-                for (let i = 0; i < files.length; i++) {
-                    formData.append('files', files[i]);
-                }
-
-                document.body.style.cursor = 'wait';
-
-                fetch("/admin/rassegna", {
+                fetch("/admin/add-rassegna", {
                     method: 'POST',
                     body: formData
                 })
                 .then(res => {
                     if (res.ok) {
                         setMessage("Dati inseriti correttamente");
-                    }
-                    else {
+                        setFile(null);
+                        document.getElementById('data').value = today;
+                        setTimeout(() => {
+                            setMessage("");
+                        }, timeout)
+                        refreshRef.current?.();
+                    } else {
                         res.text().then(text => {
                             setError(text);
+                            setTimeout(() => {
+                                setError("")
+                            }, timeout)
                         });
                     }
                 })
-                .catch (err => {
+                .catch(err => {
                     setError("Errore di connessione al server");
-                })
-                .finally(() => {
-                    document.body.style.cursor = 'default';
+                    setTimeout(() => {
+                        setError("")
+                    }, timeout)
                 });
             }
 
             return (
                 <div className="section transition rounded shadow flex-column gap-1">
                     <div>
-                        <div className="width-fit flex-center gap-1">
-                            <SectionTitle title="Carica rassegna stampa"/>
-                            {message && <p className="message">{message}</p>}
-                            {error && <p className="error">{error}</p>}
-                        </div>
-
+                        <SectionTitle title="Carica rassegna stampa" i="fa-regular fa-file-lines"/>
                         <h4>Carica un file pdf per estrarre automaticamente il numero di articoli</h4>
                     </div>
 
-                    <form encType="multipart/form-data">
+                    <form encType="multipart/form-data" className="flex-column gap-1" onSubmit={sendForm} autoComplete="off">
                         <label
-                            className={`dropzone transition rounded flex-center width-100 pointer ${dragging ? "dragging" : ""}`}
-                            onDragOver={handleDragOver}
+                            className={"dropzone transition rounded flex-center width-100 pointer"}
                             onDrop={handleDrop}>
-                            <input type="file" accept=".pdf" multiple onChange={handleChange} hidden/>
+                            <input type="file" accept=".pdf" name="file" hidden onChange={handleChange}/>
                             <div className="dropzone-content flex-center flex-column gap-05">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
                                      viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.5">
@@ -417,37 +400,119 @@
                                     <polyline points="17 8 12 3 7 8"/>
                                     <line x1="12" y1="3" x2="12" y2="15"/>
                                 </svg>
-                                <p className="dropzone-title">Trascina uno o più file PDF qui</p>
+                                <p className="dropzone-title">{file ? `✅ ${file.name}` : "Trascina uno o più file PDF qui"}</p>
                                 <p className="dropzone-sub">oppure clicca per selezionare</p>
                             </div>
                         </label>
-                    </form>
 
-                    <div className="rounded bg-main padding-1">
-                        <p className="bold">Come funziona:</p>
-                        <ol className="flex-column gap-05 padding-05-1">
-                            <li>Carica uno o più file PDF di rassegne stampa</li>
-                            <li>Il sistema estrae automaticamente il numero di articoli</li>
-                            <li>La data viene rilevata dal nome del file (es. "Unimore29052026.pdf")</li>
-                            <li>Visualizza i risultati nella pagina Rassegna Stampa</li>
-                        </ol>
-                    </div>
+                        <label> DATA
+                            <input type="date" name="giorno" defaultValue={today} className="input width-100 rounded" required max={today} id="data"/>
+                        </label>
+
+                        <div className="width-fit flex-center gap-1">
+                            <input type="submit" value="Salva rassegna" className="submit pointer rounded padding-05-1"/>
+                            {message && <p className="message">{message}</p>}
+                            {error && <p className="error">{error}</p>}
+                        </div>
+                    </form>
                 </div>
             )
         }
 
-        function ListItem(props) {
-            return (
-                <div className="flex-between transition flex-center rounded width-100 bg-main padding-05-1">
-                    <p>{props.name}</p>
-                    <p id="date-list-item">{DateFromPDF(props.name).toLocaleDateString('it-IT')}</p>
-                    <div className="flex gap-1">
-                        <a className="padding-1 transition flex-center pointer rounded unselected" href={`/static/pdfs/${props.name}`} download><i
-                            className="fa-solid fa-download"></i></a>
-                        <a className="padding-1 transition flex-center pointer rounded unselected" href={`/static/pdfs/${props.name}`} target="_blank"
-                           rel="noreferrer"><i
-                            className="fa-solid fa-eye"></i></a>
+        function EliminaRassegna({ registerRefresh }) {
+            const [latestContent, setLatestContent] = React.useState(null);
+            const [message, setMessage] = React.useState("");
+            const [error, setError] = React.useState("");
+            const [refreshKey, setRefreshKey] = React.useState(false);
+
+            React.useEffect(() => {
+                registerRefresh(() => {
+                    setRefreshKey(k => !k)
+                    setMessage("")
+                    setError("")
+                });
+            }, []);
+
+            React.useEffect(() => {
+                fetch("/admin/latest")
+                    .then(res => res.json())
+                    .then(data => {
+                        let content = [];
+
+                        for (let element of data) {
+                            content.push(<Item key={element.nome + element.giorno} nome={element.nome} giorno={element.giorno} tipo={element.tipo} />)
+                        }
+
+                        setLatestContent(content);
+                    })
+                    .catch(err => console.error('Errore nel caricamento dei dati: ' + err));
+            }, [message, refreshKey]);
+
+            const del = (nome, giorno, tipo) => {
+                setMessage("");
+                setError("");
+                fetch("/admin/delete", {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        'giorno': giorno,
+                        'nome': nome,
+                        'tipo': tipo,
+                    })
+                }).then(res => {
+                    if (res.ok) {
+                        setMessage("Dati eliminati correttamente");
+                        setTimeout(() => {
+                            setMessage("")
+                        }, timeout)
+                    } else {
+                        res.text().then(text => {
+                            setError(text);
+                            setTimeout(() => {
+                                setError("")
+                            }, timeout)
+                        });
+                    }
+                })
+                .catch(err => {
+                    setError("Errore di connessione al server");
+                    setTimeout(() => {
+                        setError("")
+                    }, timeout)
+                })
+            }
+
+            function Item(props) {
+                return (
+                    <div className="flex-center flex-between transition rounded width-100 bg-main padding-05-1">
+                        <div className="width-66 flex">
+                            <div className="width-50">
+                                {(props.tipo === 'social') ? <SocialTitle social={props.nome}/> : <p>{props.nome}</p>}
+                            </div>
+                                <p className="width-50 flex-center">{new Date(props.giorno).toLocaleDateString('it-IT')}</p>
+                        </div>
+
+                        <a onClick={() => {del(props.nome, props.giorno, props.tipo)}}>
+                            <div className="flex-center padding-1 pointer unselected rounded transition width-fit">
+                                <i className="fa-solid fa-trash"></i>
+                            </div>
+                        </a>
                     </div>
+                )
+            }
+
+            return(
+                <div className="section flex-column gap-1 rounded transition shadow">
+                    <div className="flex">
+                        <div className="flex flex-center">
+                            <SectionTitle title="Elimina dati" i="fa-regular fa-pen-to-square"/>
+                            {message && <p className="message">{message}</p>}
+                            {error && <p className="error">{error}</p>}
+                        </div>
+                    </div>
+                    {latestContent}
                 </div>
             )
         }
@@ -456,59 +521,40 @@
             <div className="content flex-column gap-2 width-100">
                 <Title title="Amministrazione" subtitle="Aggiungi dati social e carica rassegne stampa"/>
 
-                <div className="flex-column gap-2">
-                    <SocialForm social="Instagram"/>
-                    <SocialForm social="Facebook"/>
-                    <SocialForm social="Linkedin"/>
-                </div>
-
-                <div className="flex-column gap-2">
-                    <RassegnaForm />
-                </div>
-
-                <div className="flex-column gap-2">
-                    <div className="section transition rounded shadow flex-column gap-1">
-                        <h3>Rassegne stampa caricate</h3>
-
-                        <div className="flex-center flex-column gap-1 width-100">
-                            <ListItem name="Unimore15032026.pdf"/>
-                            <ListItem name="Unimore15022026.pdf"/>
-                        </div>
-                    </div>
-                </div>
+                <SocialForm social="Instagram"/>
+                <SocialForm social="Facebook"/>
+                <SocialForm social="Linkedin"/>
+                <RassegnaForm/>
+                <EliminaRassegna registerRefresh={(fn) => refreshRef.current = fn}/>
             </div>
         )
     }
 
     function Index() {
-        function Chart() {
-            const [data, setData] = React.useState([]);
+        const [data, setData] = React.useState([]);
 
-            React.useEffect(() => {
-                fetch('/rassegne')
-                .then(res =>res.json())
+        React.useEffect(() => {
+            fetch('/index/all-rassegne')
+                .then(res => res.json())
                 .then(data => setData(data.map(d => ({
                     ...d,
                     giorno: new Date(d.giorno).getTime()
                 }))))
                 .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+        }, []);
 
-                console.log(data)
-            }, []);
-
+        function Chart() {
             const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
-
-            const isMobile = useIsMobile();
 
             return (
                 <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={data}>
                         <CartesianGrid/>
-                        <Line dataKey="numero_articoli" stroke="var(--color-primary)" name="Numero articoli" strokeWidth={2}  isAnimationActive={false}/>
+                        <Line dataKey="numero_articoli" stroke="var(--color-primary)" name="Numero articoli" strokeWidth={2} isAnimationActive={false}/>
                         <XAxis
                             dataKey="giorno"
                             scale="time"
-                            type="number"
+                            type="ParseInt"
                             domain={['dataMin', 'dataMax']}
                             tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
                                 day: '2-digit',
@@ -521,14 +567,14 @@
                             height={20}
                             stroke="lightgray"
                             travellerWidth={10}
-                            startIndex={startIndex === -1 ? 0 : startIndex}
+                            startIndex={startIndex}
                             tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 year: 'numeric'
                             })}
                         />
-                        {!isMobile && <YAxis/>}
+                        <YAxis mirror={useIsMobile()}/>/>
                         <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
                         <Legend align="right"/>
                     </LineChart>
@@ -536,28 +582,165 @@
             );
         }
 
+        function RassegnaItem(props) {
+            console.log(props);
+            const URL = "/general/file?filename=" + props.nome + "&data=" + props.giorno;
+
+            return (
+                <div className="flex-between transition flex-center rounded width-100 bg-main padding-05-1">
+                    <div className="width-66 flex">
+                        <p className="width-50">{props.nome}</p>
+                        <p id="date-list-item" className="width-50 flex-center">{props.giorno}</p>
+                    </div>
+
+                    <div className="flex gap-1">
+                        <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} download><i className="fa-solid fa-download"></i></a>
+                        <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} target="_blank" rel="noreferrer"><i className="fa-solid fa-eye"></i></a>
+                    </div>
+                </div>
+            )
+        }
+
+        function RicercaRassegne () {
+            const [value, setValue] = React.useState("");
+            const [error, setError] = React.useState(null);
+            const [content, setContent] = React.useState(null);
+
+            const handleChange = (e) => {
+                setValue(e.target.value);
+                const parsed = parseDateInput(e.target.value);
+
+                if (!parsed.valid && e.target.value.length > 0) {
+                    setError("Formato non valido");
+                } else if (parsed.valid) {
+                    setError(null);
+                    const filteredRassegne = filterData(data, parsed);
+
+                    let dataComponents = [];
+                    for (let i in filteredRassegne) {
+                        let cur = filteredRassegne[i];
+                        dataComponents.push(<RassegnaItem key={cur.giorno} giorno={new Date(cur.giorno).toLocaleDateString('it-IT')} nome={cur.nome_file} numero_articoli={cur.numero_articoli}/>);
+                    }
+                    setContent(dataComponents);
+                }
+                else {
+                    setError(null);
+                    setContent([]);
+                }
+            };
+
+            function parseDateInput(value) {
+                const regex = /^(?:(\d{4})|((0?[1-9]|1[0-2])\/(\d{4}))|((0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])\/(\d{4})))$/;
+
+                if (!regex.test(value))
+                    return {valid: false};
+
+                const parts = value.split("/");
+
+                if (parts.length === 1) {
+                    return {
+                        valid: true,
+                        year: parseInt(parts[0]),
+                        month: null,
+                        day: null,
+                    };
+                }
+
+                if (parts.length === 2) {
+                    return {
+                        valid: true,
+                        year: parseInt(parts[1]),
+                        month: parseInt(parts[0]),
+                        day: null,
+                    };
+                }
+
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0]);
+                    const month = parseInt(parts[1]);
+                    const year = parseInt(parts[2]);
+
+                    const date = new Date(year, month - 1, day);
+                    const isRealDate =
+                        date.getFullYear() === year &&
+                        date.getMonth() === month - 1 &&
+                        date.getDate() === day;
+
+                    return {
+                        valid: isRealDate,
+                        year,
+                        month,
+                        day,
+                    };
+                }
+
+                return {valid: false};
+            }
+
+            function filterData(data, parsedInput) {
+                return data.filter(item => {
+                    const fileDate = new Date(item.giorno).toLocaleDateString("it-IT").split("/");
+
+                    if (parsedInput.year && !parsedInput.month && !parsedInput.day) {
+                      return parseInt(fileDate[2]) === parsedInput.year;
+                    }
+
+                    if (parsedInput.year && parsedInput.month && !parsedInput.day) {
+                      return (
+                        parseInt(fileDate[2]) === parsedInput.year &&
+                        parseInt(fileDate[1]) === parsedInput.month
+                      );
+                    }
+
+                    if (parsedInput.year && parsedInput.month && parsedInput.day) {
+                      return (
+                        parseInt(fileDate[2]) === parsedInput.year &&
+                        parseInt(fileDate[1]) === parsedInput.month &&
+                        parseInt(fileDate[0]) === parsedInput.day
+                      );
+                    }
+                });
+            }
+
+            return (
+                <div className="section transition rounded width-100 shadow flex-column gap-1">
+                    <div>
+                        <SectionTitle title="Cerca rassegne stampa" i="fa-regular fa-file-lines"/>
+                        <h4>Cerca per data: AAAA o MM/AAAA o GG/MM/AAAA</h4>
+                    </div>
+
+                    <div className="flex-center flex-between width-100 rounded padding-05-1 input">
+                        <div className="flex-center width-80">
+                            <i className="fa-solid fa-magnifying-glass color-primary"></i>
+                            <input type="text" id="cerca"
+                                   placeholder="Inserisci la data..."
+                                   value={value}
+                                   onChange={handleChange}
+                                   className="width-100"
+                                   autoComplete="off"
+                            />
+                        </div>
+
+                        {error && <p className="error">{error}</p>}
+                    </div>
+
+                    <div className="flex-center flex-column gap-1 width-100">
+                        {!error && content}
+                    </div>
+                </div>
+            )
+        }
+
         return (
             <div className="content flex-column gap-2">
                 <Title title="Rassegna stampa" subtitle="Gestione e analisi delle rassegne stampa"/>
 
-                <div className="flex-column gap-2">
-                    <div className="section transition rounded shadow flex-column gap-1">
-                        <SectionTitle title="Numero di articoli"/>
-
-                        <Chart/>
-                    </div>
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <SectionTitle title="Numero di articoli" i="fa-solid fa-arrow-up-1-9"/>
+                    <Chart/>
                 </div>
 
-                <div className="flex-column gap-2">
-                    <div className="section transition rounded width-100 shadow flex-column gap-1">
-                        <div className="flex-center width-100 rounded gap-1 padding-05-1">
-                            <i className="fa-solid fa-magnifying-glass color-primary"></i>
-                            <input type="text" id="cerca"
-                                   placeholder="Cerca per nome o data es. ('Unimore' o '29 maggio') . . ."
-                                   className="width-100"/>
-                        </div>
-                    </div>
-                </div>
+                <RicercaRassegne />
             </div>
         )
     }

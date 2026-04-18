@@ -5,14 +5,14 @@ def connect_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-def get_social():
+def select_social():
     conn = connect_db()
     cur = conn.cursor()
     rows = cur.execute("SELECT nome FROM social;").fetchall()
     conn.close()
     return rows
 
-def get_rassegne():
+def select_all_rassegne():
     conn = connect_db()
     cur = conn.cursor()
     rows = cur.execute(
@@ -25,7 +25,7 @@ def get_rassegne():
     conn.close()
     return rows
 
-def get_dati(nome_social):
+def select_dati_social(nome_social):
     conn = connect_db()
     cur = conn.cursor()
     rows = cur.execute(
@@ -39,12 +39,42 @@ def get_dati(nome_social):
     conn.close()
     return rows
 
+def select_all_dati_social():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute(
+        f'''
+            SELECT giorno, visualizzazioni, interazioni, follower, fk_social as social
+            FROM dati_social
+            ORDER BY giorno, social;
+        '''
+    ).fetchall()
+    conn.close()
+    return rows
+
+def select_latest():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute(
+        '''
+        SELECT fk_social as nome, giorno, 'social' as tipo, data_salvataggio
+        FROM dati_social
+        UNION
+        SELECT nome_file as nome, giorno, 'rassegna' as tipo, data_salvataggio
+        FROM rassegna
+        ORDER BY data_salvataggio DESC
+        LIMIT 10;
+        '''
+    ).fetchall()
+    conn.close()
+    return rows
+
 def insert_dati(dati):
     conn = connect_db()
     cur = conn.cursor()
     try:
         cur.execute(
-            'INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
             (dati['giorno'], dati['visualizzazioni'], dati['interazioni'], dati['follower'], dati['social'])
         )
     except sqlite3.IntegrityError as e:
@@ -65,7 +95,7 @@ def insert_rassegna(nome_file, giorno, numero_articoli):
     try:
         cur.execute(f'''
                         INSERT INTO rassegna 
-                        VALUES ("{nome_file}", "{giorno}", {numero_articoli});
+                        VALUES ("{nome_file}", "{giorno}", {numero_articoli}, CURRENT_TIMESTAMP);
         ''')
     except sqlite3.IntegrityError as e:
         return False, 'Errore: duplicato'
@@ -99,13 +129,38 @@ def update_articles_number(nome_file, numero_articoli):
         conn.close()
     return True, ''
 
-def delete_rassegna(dati):
+def delete_rassegna(giorno):
     conn = connect_db()
     cur = conn.cursor()
-    cur.execute(f'''
-        DELETE * 
-        FROM rassegna 
-        WHERE nome_file="{dati.nome_file}"
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        cur.execute(f'''
+                DELETE FROM rassegna 
+                WHERE giorno="{giorno}"
+        ''')
+    except sqlite3.OperationalError as e:
+        return False, 'Errore operativo'
+    except sqlite3.DatabaseError as e:
+        return False, 'Errore nel database'
+    finally:
+        conn.commit()
+        conn.close()
+
+    return True, ''
+
+def delete_dato_social(social, giorno):
+    conn = connect_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(f'''
+                    DELETE FROM dati_social 
+                    WHERE giorno="{giorno}" AND fk_social="{social}"
+            ''')
+    except sqlite3.OperationalError:
+        return False, 'Errore operativo'
+    except sqlite3.DatabaseError:
+        return False, 'Errore nel database'
+    finally:
+        conn.commit()
+        conn.close()
+
+    return True, ''

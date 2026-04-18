@@ -15,7 +15,7 @@
     --color-light-gray: #bec3cc;
 
     --color-text-primary: #000000;
-    --color-text-secondary: #4B5563;
+    --color-text-secondary: #535d6c;
     --color-text-muted: #9CA3AF;
 
     --color-bg-main: #F9FAFB;
@@ -58,13 +58,16 @@ body, #root {
 
 /*Width*/
 .width-100 { width: 100%; }
+.width-50 { width: 50% }
+.width-66 { width: 66.6% }
+.width-80 { width: 80% }
 .width-fit { width: fit-content; }
 
 /*testo*/
-.bold, h1, h2, h3, span, .submit, .dropzone-title { font-weight: 600; }
-label, h4, .dropzone-content{ color: var(--color-text-muted); font-weight: lighter; }
+h1, h2, h3, span, .submit, .dropzone-title { font-weight: 600; }
+label, h4, .dropzone-content{ color: var(--color-text-secondary); font-weight: lighter; }
 
-h2, h3, h4, .right > a > i, span, label, .bold { font-size: 1.2rem; }
+h2, h3, h4, .right > a > i, span, label { font-size: 1.2rem; }
 h1 { font-size: 2rem; }
 
 /*Colori*/
@@ -100,8 +103,6 @@ input { color: var(--color-text-primary); }
     overflow: hidden;
 }
 
-.navbar-items { justify-content: flex-end; }
-
 img { width: 10rem; }
 
 .selected { color: var(--color-primary); background-color: var(--color-primary-light); }
@@ -130,6 +131,7 @@ img { width: 10rem; }
 .submit {
     width: 10rem;
     color: var(--color-white);
+    background-color: var(--color-primary);
 }
 
 .submit[data-platform="Instagram"] { background-color: var(--color-instagram); }
@@ -165,8 +167,8 @@ img { width: 10rem; }
 }
 
 @media only screen and (max-width: 768px) {
-    #date-list-item, .navbar-items h2 { display: none; }
-    .navbar-items i { font-size: 1.5rem; }
+    .navbar h2 { display: none; }
+    .navbar i { font-size: 1.5rem; }
     .content { padding: 6rem 0.7rem 1rem 0.7rem; }
     .navbar { padding: 0.4rem 2rem}
     ::-webkit-scrollbar { display: none; }
@@ -178,4 +180,8 @@ img { width: 10rem; }
         gap: 0.5rem;
     }
     .navbar { padding: 0.4rem}
+    .navbar div {gap: 0.6rem}
+    .width-66 { flex-direction: column; gap: 0.5rem; }
+    .width-50 { justify-content: flex-start; }
+    #date-list-item { display: none; }
 }

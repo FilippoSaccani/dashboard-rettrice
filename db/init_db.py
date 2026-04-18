@@ -9,7 +9,8 @@ cursor.executescript('''
     CREATE TABLE IF NOT EXISTS rassegna (
         nome_file TEXT PRIMARY KEY,
         giorno TEXT UNIQUE NOT NULL,
-        numero_articoli INTEGER NOT NULL 
+        numero_articoli INTEGER NOT NULL,
+        data_salvataggio TEXT NOT NULL
     );
     
     CREATE TABLE IF NOT EXISTS social (
@@ -22,6 +23,7 @@ cursor.executescript('''
         interazioni INTEGER NOT NULL, 
         follower INTEGER NOT NULL,
         fk_social TEXT NOT NULL,
+        data_salvataggio TEXT NOT NULL,
         FOREIGN KEY (fk_social) REFERENCES social(nome),
         PRIMARY KEY (giorno, fk_social)
     );
@@ -30,18 +32,15 @@ cursor.executescript('''
     INSERT INTO social VALUES ('Facebook');
     INSERT INTO social VALUES ('Linkedin');
     
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2026-02-12', 100, 20, 34, 'Instagram');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-02-12', 10, 202, 341, 'Instagram');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2026-03-12', 120, 210, 134, 'Instagram');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-03-12', 10, 20, 34, 'Facebook');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-05-12', 130, 220, 121, 'Facebook');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-06-12', 120, 234, 101, 'Facebook');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-06-12', 120, 234, 101, 'Linkedin');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-07-12', 23, 34, 56, 'Linkedin');
-    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social) VALUES ('2025-08-12', 56, 78, 98, 'Linkedin');
-
-    INSERT INTO rassegna VALUES ('Unimore20260812.txt', '2026-08-12', 42);
-    INSERT INTO rassegna VALUES ('Unimore20250812.txt', '2025-08-12', 30);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2026-02-12', 100, 20, 34, 'Instagram', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-02-12', 10, 202, 341, 'Instagram', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2026-03-12', 120, 210, 134, 'Instagram', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-03-12', 10, 20, 34, 'Facebook', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-05-12', 130, 220, 121, 'Facebook', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-06-12', 120, 234, 101, 'Facebook', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-06-12', 120, 234, 101, 'Linkedin', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-07-12', 23, 34, 56, 'Linkedin', CURRENT_TIMESTAMP);
+    INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-08-12', 56, 78, 98, 'Linkedin', CURRENT_TIMESTAMP);
 ''')
 
 conn.commit()
