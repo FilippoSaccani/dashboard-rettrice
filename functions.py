@@ -28,7 +28,6 @@ def get_date_from_formatted(data):
         else:
             return False, "Formato data non valido"
 
-
 def get_pdf_folder(data):
     mesi = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
 

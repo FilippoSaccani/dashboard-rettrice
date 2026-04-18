@@ -58,6 +58,7 @@ def get_latest():
     return flask.jsonify([dict(row) for row in rows])
 
 @app.route('/admin/add-rassegna', methods=['POST'])
+@timer
 def send_form_rassegna():
     try:
         file = flask.request.files.getlist('file')[0]
