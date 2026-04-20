@@ -194,7 +194,7 @@
                                 key={startIndex}
                                 dataKey="giorno"
                                 height={20}
-                                stroke="lightgray"
+                                stroke="var(--color-text-muted)"
                                 travellerWidth={10}
                                 startIndex={startIndex}
                                 tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
@@ -215,7 +215,10 @@
         function SocialChart(props) {
             return (
                 <div className="section transition rounded shadow flex-column gap-1">
-                    <SocialTitle social={props.social}/>
+                    <div className="flex-column gap-05">
+                        <SocialTitle social={props.social}/>
+                        <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
+                    </div>
                     <Chart social={props.social}/>
                 </div>
             )
@@ -529,7 +532,7 @@
                 <div className="section flex-column gap-1 rounded transition shadow">
                     <div className="flex">
                         <div className="flex flex-center">
-                            <SectionTitle title="Elimina dati" i="fa-regular fa-pen-to-square"/>
+                            <SectionTitle title="Elimina gli ultimi dati caricati" i="fa-regular fa-pen-to-square"/>
                             {message && <p className="message">{message}</p>}
                             {error && <p className="error">{error}</p>}
                         </div>
@@ -587,7 +590,7 @@
                         <Brush
                             dataKey="giorno"
                             height={20}
-                            stroke="lightgray"
+                            stroke="var(--color-text-muted)"
                             travellerWidth={10}
                             startIndex={startIndex}
                             tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
@@ -598,7 +601,7 @@
                         />
                         <YAxis mirror={useIsMobile()}/>/>
                         <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
-                        <Legend align="right"/>
+                        <Legend align="right" />
                     </LineChart>
                 </ResponsiveContainer>
             );
@@ -758,7 +761,10 @@
                 <Title title="Rassegna stampa" subtitle="Gestione e analisi delle rassegne stampa"/>
 
                 <div className="section transition rounded shadow flex-column gap-1">
-                    <SectionTitle title="Numero di articoli" i="fa-solid fa-arrow-up-1-9"/>
+                    <div>
+                        <SectionTitle title="Numero di articoli" i="fa-solid fa-arrow-up-1-9"/>
+                        <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
+                    </div>
                     <Chart/>
                 </div>
 
