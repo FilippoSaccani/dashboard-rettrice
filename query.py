@@ -1,4 +1,4 @@
-import sqlite3
+from search_functions import *
 
 def connect_db():
     conn = sqlite3.connect('db/database.db')
@@ -69,6 +69,45 @@ def select_latest():
     conn.close()
     return rows
 
+def select_all_temi():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute(
+        '''
+        SELECT nome
+        FROM tema
+        '''
+    ).fetchall()
+    conn.close()
+    return rows
+
+def select_all_testate():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute(
+        '''
+        SELECT nome, scala, importanza
+        FROM testata
+        ORDER BY importanza DESC ;
+        '''
+    ).fetchall()
+    conn.close()
+    return rows
+
+def select_importante_testate():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute(
+        '''
+        SELECT nome, scala, importanza
+        FROM testata
+        ORDER BY importanza DESC
+        LIMIT 5;
+        '''
+    ).fetchall()
+    conn.close()
+    return rows
+
 def insert_dati(dati):
     conn = connect_db()
     cur = conn.cursor()
@@ -80,9 +119,9 @@ def insert_dati(dati):
     except sqlite3.IntegrityError as e:
         return False, 'Errore: duplicato'
     except sqlite3.OperationalError as e:
-        return False, 'Errore operativo'
+        return False, f'Errore operativo: {e}'
     except sqlite3.DatabaseError as e:
-        return False, 'Errore nel database'
+        return False, f'Errore nel database: {e}'
     finally:
         conn.commit()
         conn.close()
@@ -100,9 +139,37 @@ def insert_rassegna(nome_file, giorno, numero_articoli):
     except sqlite3.IntegrityError as e:
         return False, 'Errore: duplicato'
     except sqlite3.OperationalError as e:
-        return False, 'Errore operativo'
+        return False, f'Errore operativo: {e}'
     except sqlite3.DatabaseError as e:
-        return False, 'Errore nel database'
+        return False, f'Errore nel database: {e}'
+    finally:
+        conn.commit()
+        conn.close()
+    return True, ''
+
+def handle_new_testata(testata):
+    print("!!!! HANDLING !!!!")
+    conn = connect_db()
+    get_or_classify_testata(testata, conn)
+    conn.commit()
+    conn.close()
+    return True, ''
+
+def insert_tema(nome):
+    conn = connect_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            'INSERT INTO tema (nome) VALUES (?)',
+            (nome,)
+        )
+    except sqlite3.IntegrityError as e:
+        return False, 'Errore: duplicato'
+    except sqlite3.OperationalError as e:
+        return False, f'Errore operativo: {e}'
+    except sqlite3.DatabaseError as e:
+        return False, f'Errore nel database: {e}'
     finally:
         conn.commit()
         conn.close()
@@ -120,7 +187,7 @@ def insert_articolo(rassegna, tema, testata):
     except sqlite3.IntegrityError as e:
         return False, 'Errore: duplicato'
     except sqlite3.OperationalError as e:
-        return False, 'Errore operativo'
+        return False, f'Errore operativo: {e}'
     except sqlite3.DatabaseError as e:
         return False, f'Errore nel database: {e}'
     finally:
@@ -141,9 +208,9 @@ def update_articles_number(nome_file, numero_articoli):
     except sqlite3.IntegrityError as e:
         return False, 'Errore: duplicato'
     except sqlite3.OperationalError as e:
-        return False, 'Errore operativo'
+        return False, f'Errore operativo: {e}'
     except sqlite3.DatabaseError as e:
-        return False, 'Errore nel database'
+        return False, f'Errore nel database: {e}'
     finally:
         conn.commit()
         conn.close()
@@ -158,9 +225,9 @@ def delete_rassegna(giorno):
                 WHERE giorno="{giorno}"
         ''')
     except sqlite3.OperationalError as e:
-        return False, 'Errore operativo'
+        return False, f'Errore operativo: {e}'
     except sqlite3.DatabaseError as e:
-        return False, 'Errore nel database'
+        return False, f'Errore nel database: {e}'
     finally:
         conn.commit()
         conn.close()
@@ -175,10 +242,10 @@ def delete_dato_social(social, giorno):
                     DELETE FROM dati_social 
                     WHERE giorno="{giorno}" AND fk_social="{social}"
             ''')
-    except sqlite3.OperationalError:
-        return False, 'Errore operativo'
-    except sqlite3.DatabaseError:
-        return False, 'Errore nel database'
+    except sqlite3.OperationalError as e:
+        return False, f'Errore operativo: {e}'
+    except sqlite3.DatabaseError as e:
+        return False, f'Errore nel database: {e}'
     finally:
         conn.commit()
         conn.close()

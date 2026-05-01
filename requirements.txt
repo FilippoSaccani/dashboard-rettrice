@@ -13,3 +13,6 @@ pillow==12.2.0
 pycparser==3.0
 pypdfium2==5.7.0
 Werkzeug==3.1.8
+ollama
+httpx
+beautifulsoup4

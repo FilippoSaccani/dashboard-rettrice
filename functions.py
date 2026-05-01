@@ -1,5 +1,4 @@
 import os
-import re
 from datetime import date
 from time import time
 from collections import defaultdict
@@ -47,10 +46,15 @@ def save_pdf(file, data, new_filename):
     try:
         folder = get_pdf_folder(data)
         os.makedirs(folder, exist_ok=True)
+
+        full_path = os.path.join(folder, new_filename)
+
+        # Controllo esplicito se il file esiste
+        if os.path.exists(full_path):
+            return False, "Errore: duplicato"
+
         file.save(os.path.join(folder, new_filename))
         return True, ""
-    except FileExistsError:
-        return False, "Errore: duplicato"
     except Exception:
         return False, "Errore nell'archiviazione del file"
 
@@ -105,18 +109,46 @@ def extract_articles(filename, data):
     return results
 
 @timer
-def process_pdf(filename, data):
+def process_pdf(filename, data, status):
     articles = extract_articles(filename, data)
     try:
+        temi = select_all_temi()
+        temi = [r[0] for r in temi]
+
+        testate = select_all_testate()
+        testate = [row[0] for row in testate]
+
         insert_rassegna(filename, data, len(articles))
         for article in articles:
-            # print("Tema: ", article["tema"], " Testata: ", article['testata'])
-            ok, error = insert_articolo(filename, article['tema'], article['testata'])
+            tema = article['tema'].strip()
+            testata = article['testata'].strip()
+
+            if tema not in temi:
+                ok, error = insert_tema(tema)
+
+                if not ok:
+                    print("Tema: ", error)
+                    return ok, error
+
+                temi = select_all_temi()
+
+            if testata not in testate:
+                ok, error = handle_new_testata(testata)
+
+                if not ok:
+                    print(error)
+                    return ok, error
+
+                testate = select_all_testate()
+
+            ok, error = insert_articolo(filename, tema, testata)
 
             if not ok:
-                print(error)
-                return error, 400
-
-        # update_articles_number(filename, articles)
+                print("Testata: ", error)
+                return ok, error
     except Exception as e:
         print(f'Errore: {e}')
+        return False, e
+
+    status["done"] = True
+    return True, ''

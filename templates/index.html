@@ -118,14 +118,13 @@
     function Filter(props) {
         return (
             <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "
-                 onClick={() => props.toggleLinea(props.line)}>
+                 onClick={() => props.onClick(props.line)}>
                 <i className={"fa-solid " + (props.visibile ? 'fa-minus' : 'fa-plus')}></i>
                 <p>{props.label}</p>
             </div>
         )
     }
 
-    /*
     function Social() {
         function Chart(props) {
             const [data, setData] = React.useState([]);
@@ -166,9 +165,9 @@
             return (
                 <div className="flex-column gap-1">
                     <div className="flex gap-1 filter">
-                        <Filter line="follower" label={labels["follower"]} toggleLinea={toggleLinea} visibile={visibili["follower"]}>
-                        <Filter line="visualizzazioni" label={labels["visualizzazioni"]} toggleLinea={toggleLinea} visibile={visibili["visualizzazioni"]}/>
-                        <Filter line="interazioni" label={labels["interazioni"]} toggleLinea={toggleLinea} visibile={visibili["interazioni"]}/>
+                        <Filter line="follower" label={labels["follower"]} onClick={toggleLinea} visibile={visibili["follower"]}/>
+                        <Filter line="visualizzazioni" label={labels["visualizzazioni"]} onClick={toggleLinea} visibile={visibili["visualizzazioni"]}/>
+                        <Filter line="interazioni" label={labels["interazioni"]} onClick={toggleLinea} visibile={visibili["interazioni"]}/>
                     </div>
 
                     <ResponsiveContainer width="100%" height={400}>
@@ -237,9 +236,8 @@
             </div>
         )
     }
-    */
 
-    function Admin() {
+    function Admin({setLoading}) {
         const timeout = 15000;
         const refreshRef = React.useRef(null);
 
@@ -267,31 +265,28 @@
                         social: props.social
                     })
                 })
-                    .then(res => {
-                        if (res.ok) {
-                            setMessage("Dati inseriti correttamente");
-                            setTimeout(() => {
-                                setMessage("")
-                            }, timeout)
-                            refreshRef.current?.();
-                        } else {
-                            res.text().then(text => {
-                                setError(text);
-                                setTimeout(() => {
-                                    setError("")
-                                }, timeout)
-                            })
-                        }
-                    })
-                    .catch(err => {
-                        setError("Errore di connessione al server");
+                .then(res => {
+                    if (res.ok) {
+                        setMessage("Dati inseriti correttamente");
                         setTimeout(() => {
-                            setError("")
+                            setMessage("")
                         }, timeout)
-                    })
-                    .finally(() => {
-                        document.body.style.cursor = 'default';
-                    });
+                        refreshRef.current?.();
+                    } else {
+                        res.text().then(text => {
+                            setError(text);
+                            setTimeout(() => {
+                                setError("")
+                            }, timeout)
+                        })
+                    }
+                })
+                .catch(err => {
+                    setError("Errore di connessione al server");
+                    setTimeout(() => {
+                        setError("")
+                    }, timeout)
+                })
             }
 
             return (
@@ -332,6 +327,9 @@
             const [message, setMessage] = React.useState(null);
             const [error, setError] = React.useState(null);
             const [file, setFile] = React.useState(null);
+            const ok = React.useRef(false);
+
+            const intervalRef = React.useRef(null);
 
             const handleFiles = (files) => {
                 if (files.length > 0) {
@@ -345,67 +343,77 @@
             };
 
             const handleChange = (e) => {
+                setMessage("");
+                setError("");
                 handleFiles(e.target.files);
             };
 
-            const showLoading = () => {
-                const overlay = document.createElement('div');
-                overlay.id = 'loading-overlay';
-                overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    cursor: wait;
-                    z-index: 99999;
-                `;
-                document.body.appendChild(overlay);
-            };
+            const startPolling = () => {
+                intervalRef.current = setInterval(() => {
+                    fetch("/status")
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.done) {
+                                setLoading(false);
+                                clearInterval(intervalRef.current);
+                                intervalRef.current = null;
 
-            const hideLoading = () => {
-                document.getElementById('loading-overlay')?.remove();
+                                if (ok.current) {
+                                    setMessage("Dati inseriti correttamente");
+                                    setTimeout(() => {
+                                        setMessage("");
+                                    }, timeout);
+                                }
+
+                                refreshRef.current?.();
+                            }
+                        })
+                        .catch(() => {
+                            setLoading(false);
+                            clearInterval(intervalRef.current);
+                            intervalRef.current = null;
+
+                            refreshRef.current?.();
+                        });
+                }, 500);
             };
 
             const sendForm = (e) => {
                 e.preventDefault();
-
-                showLoading()
 
                 setMessage("");
                 setError("");
 
                 const formData = new FormData(e.target);
 
+                setLoading(true);
                 fetch("/admin/add-rassegna", {
                     method: 'POST',
                     body: formData
                 })
                 .then(res => {
                     if (res.ok) {
-                        setMessage("Dati inseriti correttamente");
                         setFile(null);
                         document.getElementById('data').value = today;
-                        setTimeout(() => {
-                            setMessage("");
-                        }, timeout)
-                        refreshRef.current?.();
+                        ok.current = true;
                     } else {
                         res.text().then(text => {
                             setError(text);
                             setTimeout(() => {
-                                setError("")
-                            }, timeout)
+                                setError("");
+                            }, timeout);
                         });
                     }
                 })
                 .catch(err => {
                     setError("Errore di connessione al server");
                     setTimeout(() => {
-                        setError("")
-                    }, timeout)
+                        setError("");
+                    }, timeout);
                 })
-                .finally(() => hideLoading());
+                .finally(() => {
+                    startPolling();
+                });
             }
 
             return (
@@ -571,12 +579,69 @@
         }, []);
 
         function FilterContainer(){
+            const [temiVisibili, setTemiVisibili] = React.useState([]);
+            const [temi, setTemi] = React.useState([]);
+            const [scaleVisibili, setScaleVisibili] = React.useState([]);
+            const [scale, setScale] = React.useState([]);
+
+            React.useEffect(() => {
+                fetch(`/index/all-temi`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const t = [];
+                        data.forEach(tema => {
+                            t.push(tema.nome);
+                        })
+                        setTemi(t);
+
+                        const temi_iniziali = {};
+                        temi.forEach((tema =>{
+                             temi_iniziali[tema] = true;
+                        }))
+                        setTemiVisibili(temi_iniziali);
+                    })
+                    .catch(err => console.error('Errore nel caricamento dei temi' + err))
+            }, []);
+
+            React.useEffect(() => {
+                fetch(`/index/all-scale`)
+                    .then(res => res.json())
+                    .then(data => {
+                        setScale(data);
+
+                        const scale_iniziali = {};
+                        scale.forEach((scala =>{
+                             scale_iniziali[scala] = true;
+                        }))
+                        setScaleVisibili(scale_iniziali);
+                    })
+                    .catch(err => console.error('Errore nel caricamento delle scale' + err))
+            }, []);
+
+            const toggleLineaTemi = (linea) => {
+                setTemiVisibili(prev => ({...prev, [linea]: !prev[linea]}));
+            };
+            const toggleLineaScale = (linea) => {
+                setScaleVisibili(prev => ({...prev, [linea]: !prev[linea]}));
+            };
 
             return(
-                <div className="flex-column gap-1 rounded bg-main width-100 padding-1">
+                <div className="flex-column gap-1 width-100 padding-1">
                     <div className="flex-column gap-05">
                         <h3>Tema:</h3>
-
+                        <div className="flex-center width-fit gap-05">
+                            {temi.map(tema =>
+                                <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex-column gap-05">
+                        <h3>Scala:</h3>
+                        <div className="flex-center width-fit gap-05">
+                            {scale.map(scala =>
+                                <Filter key={scala} line={scala} label={scala} onClick={toggleLineaScale} visibile={scaleVisibili[scala]}/>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
@@ -788,20 +853,56 @@
         )
     }
 
+    function Footer(){
+        return(
+            <div className="footer width-100">
+                <div className="width-fit flex-center color-white gap-1">
+                    <i className="fa-solid fa-circle-notch icona-spin"></i>
+                    <h3>I dati inseriti sono in fase di elaborazione . . .</h3>
+                </div>
+            </div>
+        );
+    }
+
+    const loadingManager = {
+        value: false,
+        listeners: new Set(),
+        set(val) {
+            this.value = val;
+            this.listeners.forEach(fn => fn(val));
+        },
+        subscribe(fn) {
+            this.listeners.add(fn);
+            return () => this.listeners.delete(fn);
+        }
+    };
+
+    function ManagedFooter() {
+        const [isVisible, setIsVisible] = React.useState(loadingManager.value);
+
+        React.useEffect(() => {
+            // Si sottoscrive ai cambiamenti solo per questo componente
+            return loadingManager.subscribe(setIsVisible);
+        }, []);
+
+        return isVisible ? <Footer /> : null;
+    }
+
     function App() {
+        const setLoading = (val) => loadingManager.set(val);
+
         return (
             <BrowserRouter>
                 <NavBar/>
                 <Routes>
                     <Route path="/" element={<Index/>}></Route>
-                    <Route path="/admin" element={<Admin/>}></Route>
-
+                    <Route path="/admin" element={<Admin setLoading={setLoading}/>}></Route>
+                    <Route path="/social" element={<Social/>}></Route>
                 </Routes>
+                <ManagedFooter/>
             </BrowserRouter>
         )
     }
-
-    // <Route path="/social" element={<Social/>}></Route>
 
     const root = createRoot(document.getElementById("root"));
     root.render(<App/>);

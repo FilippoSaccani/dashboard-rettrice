@@ -74,13 +74,14 @@ h1 { font-size: 2rem; }
 .error { color: red; }
 .color-primary { color: var(--color-primary); }
 input { color: var(--color-text-primary); }
+.color-white {color: var(--color-white)}
 
 .bg-main, .dropzone { background-color: var(--color-bg-main); }
 
 /*Padding*/
 .padding-05-1, input { padding: 0.5rem 1rem; }
 .padding-1 { padding: 1rem; }
-.content { padding: 7rem 15rem 2rem 15rem; width: 100vw }
+.content { padding: 7rem 15rem 4rem 15rem; width: 100vw }
 
 /*Altro*/
 .rounded { border-radius: 5px; }
@@ -100,6 +101,25 @@ input { color: var(--color-text-primary); }
     padding: 0.4rem 5rem;
     z-index: 2;
     overflow: hidden;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    padding: 1rem 5rem;
+    z-index: 2;
+    overflow: hidden;
+    background-color: rgb(24 119 242 / 0.7);
+}
+
+@keyframes rotazione {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.icona-spin {
+    display: inline-block;
+    animation: rotazione 2s linear infinite; /* 2 secondi per un giro completo, continuo */
 }
 
 img { width: 10rem; }

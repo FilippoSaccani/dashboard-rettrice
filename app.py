@@ -7,6 +7,8 @@ from functions import *
 
 app = flask.Flask(__name__)
 
+status = {"done": False}
+
 @app.route('/')
 @app.route('/admin')
 @app.route('/social')
@@ -60,6 +62,9 @@ def get_latest():
 @app.route('/admin/add-rassegna', methods=['POST'])
 def send_form_rassegna():
     try:
+        global status
+        status["done"] = False
+
         file = flask.request.files.getlist('file')[0]
         giorno = flask.request.form.get('giorno')
         data = get_date_from_formatted(giorno)
@@ -70,16 +75,16 @@ def send_form_rassegna():
 
         if not ok:
             print(error)
+            status["done"] = True
             return error, 400
-
-        # ok, error = insert_rassegna(new_filename, data, 0)
 
         if not ok:
             print(error)
+            status["done"] = True
             return error, 400
 
-        thread = threading.Thread(target=process_pdf, args=(new_filename, data))
-        thread.daemon = True
+        thread = threading.Thread(target=process_pdf, args=(new_filename, data, status))
+        thread.daemon = False
         thread.start()
 
         return 'ok', 200
@@ -91,6 +96,16 @@ def send_form_rassegna():
 def get_all_rassegne():
     rows = select_all_rassegne()
     return flask.jsonify([dict(row) for row in rows])
+
+@app.route('/index/all-temi', methods=["GET"])
+def get_all_temi():
+    rows = select_all_temi()
+    return flask.jsonify([dict(row) for row in rows])
+
+@app.route('/index/all-scale', methods=["GET"])
+def get_all_scale():
+    rows = ['Locale', 'Nazionale', 'Internazionale']
+    return flask.jsonify(rows)
 
 @app.route('/general/file', methods=["GET"])
 def get_file():
@@ -130,6 +145,9 @@ def delete():
             return error, 400
     return '', 200
 
+@app.route("/status")
+def get_status():
+    return flask.jsonify(status)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", threaded=True, port=51852)
