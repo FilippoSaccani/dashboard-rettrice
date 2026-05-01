@@ -2,10 +2,20 @@ import os
 import re
 from datetime import date
 from time import time
-
+from collections import defaultdict
 import pdfplumber
 
 from query import *
+
+# Boilerplate da ignorare
+BOILERPLATE = re.compile(
+    r'Riproduzione autorizzata|'
+    r'^(domenica|lunedì|martedì|mercoledì|giovedì|venerdì|sabato)\b|'
+    r'^Pagina\s+\d+|'
+    r'©?\s*RIPRODUZIONE RISERVATA|'
+    r'^\d{1,4}$',
+    re.IGNORECASE
+)
 
 def timer(func):
     def wrap(*args, **kwargs):
@@ -51,25 +61,62 @@ def delete_pdf(path):
     else:
         return False, "Errore nell'eliminazione del file"
 
-@timer
-def count_articles(filename, data):
+def extract_articles(filename, data):
     text = ""
     folder = get_pdf_folder(data)
     with pdfplumber.open(os.path.join(folder, filename)) as pdf:
         for page in pdf.pages:
             text += page.extract_text() or ""
 
-    # Ogni articolo ha un marcatore univoco tipo [§27225702§]
-    articles = re.findall(r'\[§\d+§]', text)
+    # Splitta mantenendo i marcatori come delimitatori
+    parts = re.split(r'(\[§\d+§])', text)
 
-    # Rimuovi duplicati (lo stesso marcatore appare su più pagine)
-    unique_articles = set(articles)
+    # Accumula il testo per ogni marcatore univoco
+    articles_raw = defaultdict(str)
+    current_marker = None
 
-    return len(unique_articles)
+    for part in parts:
+        if re.fullmatch(r'\[§\d+§]', part.strip()):
+            current_marker = part.strip()
+        elif current_marker:
+            articles_raw[current_marker] += part
 
+    # Estrai testata e tema da ogni blocco
+    results = []
+    for marker, content in articles_raw.items():
+        lines = [
+            l.strip() for l in content.split('\n')
+            if l.strip() and not BOILERPLATE.search(l.strip())
+        ]
+
+        if len(lines) < 2:
+            continue
+
+        # Le ultime 2 righe significative sono sempre testata e tema
+        testata = lines[0]
+        tema = lines[1]
+
+        results.append({
+            'marker': marker,
+            'testata': testata,
+            'tema': tema,
+        })
+
+    return results
+
+@timer
 def process_pdf(filename, data):
-    articles = count_articles(filename, data)
+    articles = extract_articles(filename, data)
     try:
-        update_articles_number(filename, articles)
+        insert_rassegna(filename, data, len(articles))
+        for article in articles:
+            # print("Tema: ", article["tema"], " Testata: ", article['testata'])
+            ok, error = insert_articolo(filename, article['tema'], article['testata'])
+
+            if not ok:
+                print(error)
+                return error, 400
+
+        # update_articles_number(filename, articles)
     except Exception as e:
         print(f'Errore: {e}')

@@ -28,9 +28,41 @@ cursor.executescript('''
         PRIMARY KEY (giorno, fk_social)
     );
     
+    CREATE TABLE IF NOT EXISTS scala (
+        nome TEXT PRIMARY KEY
+    );
+        
+    CREATE TABLE IF NOT EXISTS testata(
+        nome TEXT PRIMARY KEY,
+        scala TEXT NOT NULL,
+        FOREIGN KEY (scala) REFERENCES scala(nome)
+    );
+        
+    CREATE TABLE IF NOT EXISTS tema (
+        nome TEXT PRIMARY KEY
+    );
+        
+    CREATE TABLE IF NOT EXISTS articolo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fk_tema TEXT NOT NULL,
+        fk_rassegna TEXT NOT NULL,
+        fk_testata TEXT NOT NULL,
+        FOREIGN KEY(fk_tema) REFERENCES tema(nome),
+        FOREIGN KEY(fk_rassegna) REFERENCES rassegna(nome_file)
+    );
+    
     INSERT INTO social VALUES ('Instagram');
     INSERT INTO social VALUES ('Facebook');
     INSERT INTO social VALUES ('Linkedin');
+        
+    INSERT INTO tema VALUES ('Ricerca e Altri atenei');
+    INSERT INTO tema VALUES ('Intelligenza Artificiale e tecnologie');
+    INSERT INTO tema VALUES ('Ateneo');
+    INSERT INTO tema VALUES ('Politica Locale');
+        
+    INSERT INTO scala VALUES ('locale');
+    INSERT INTO scala VALUES ('nazionale');
+    INSERT INTO scala VALUES ('internazionale');
     
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2026-02-12', 100, 20, 34, 'Instagram', CURRENT_TIMESTAMP);
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2025-02-12', 10, 202, 341, 'Instagram', CURRENT_TIMESTAMP);

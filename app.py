@@ -58,7 +58,6 @@ def get_latest():
     return flask.jsonify([dict(row) for row in rows])
 
 @app.route('/admin/add-rassegna', methods=['POST'])
-@timer
 def send_form_rassegna():
     try:
         file = flask.request.files.getlist('file')[0]
@@ -73,7 +72,7 @@ def send_form_rassegna():
             print(error)
             return error, 400
 
-        ok, error = insert_rassegna(new_filename, data, 0)
+        # ok, error = insert_rassegna(new_filename, data, 0)
 
         if not ok:
             print(error)

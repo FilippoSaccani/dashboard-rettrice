@@ -108,6 +108,26 @@ def insert_rassegna(nome_file, giorno, numero_articoli):
         conn.close()
     return True, ''
 
+def insert_articolo(rassegna, tema, testata):
+    conn = connect_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            'INSERT INTO articolo (fk_rassegna, fk_tema, fk_testata) VALUES (?, ?, ?)',
+            (rassegna, tema, testata)
+        )
+    except sqlite3.IntegrityError as e:
+        return False, 'Errore: duplicato'
+    except sqlite3.OperationalError as e:
+        return False, 'Errore operativo'
+    except sqlite3.DatabaseError as e:
+        return False, f'Errore nel database: {e}'
+    finally:
+        conn.commit()
+        conn.close()
+    return True, ''
+
 def update_articles_number(nome_file, numero_articoli):
     conn = connect_db()
     cur = conn.cursor()

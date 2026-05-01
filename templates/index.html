@@ -115,6 +115,17 @@
         )
     }
 
+    function Filter(props) {
+        return (
+            <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "
+                 onClick={() => props.toggleLinea(props.line)}>
+                <i className={"fa-solid " + (props.visibile ? 'fa-minus' : 'fa-plus')}></i>
+                <p>{props.label}</p>
+            </div>
+        )
+    }
+
+    /*
     function Social() {
         function Chart(props) {
             const [data, setData] = React.useState([]);
@@ -152,22 +163,12 @@
                 setVisibili(prev => ({...prev, [linea]: !prev[linea]}));
             };
 
-            function Filter(props) {
-                return (
-                    <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "
-                         onClick={() => toggleLinea(props.line)}>
-                        <i className={"fa-solid " + (visibili[props.line] ? 'fa-minus' : 'fa-plus')}></i>
-                        <p>{labels[props.line]}</p>
-                    </div>
-                )
-            }
-
             return (
                 <div className="flex-column gap-1">
                     <div className="flex gap-1 filter">
-                        <Filter line="follower"/>
-                        <Filter line="visualizzazioni"/>
-                        <Filter line="interazioni"/>
+                        <Filter line="follower" label={labels["follower"]} toggleLinea={toggleLinea} visibile={visibili["follower"]}>
+                        <Filter line="visualizzazioni" label={labels["visualizzazioni"]} toggleLinea={toggleLinea} visibile={visibili["visualizzazioni"]}/>
+                        <Filter line="interazioni" label={labels["interazioni"]} toggleLinea={toggleLinea} visibile={visibili["interazioni"]}/>
                     </div>
 
                     <ResponsiveContainer width="100%" height={400}>
@@ -236,6 +237,7 @@
             </div>
         )
     }
+    */
 
     function Admin() {
         const timeout = 15000;
@@ -568,6 +570,18 @@
                 .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
         }, []);
 
+        function FilterContainer(){
+
+            return(
+                <div className="flex-column gap-1 rounded bg-main width-100 padding-1">
+                    <div className="flex-column gap-05">
+                        <h3>Tema:</h3>
+
+                    </div>
+                </div>
+            );
+        }
+
         function Chart() {
             const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
 
@@ -731,7 +745,7 @@
                 <div className="section transition rounded width-100 shadow flex-column gap-1">
                     <div>
                         <SectionTitle title="Cerca rassegne stampa" i="fa-regular fa-file-lines"/>
-                        <h4>Cerca per data: AAAA o MM/AAAA o GG/MM/AAAA</h4>
+                        <h4>Cerca per data: AAAA o MM/AAAA o GG/MM/AAAA o per parola chiave</h4>
                     </div>
 
                     <div className="flex-center flex-between width-100 rounded padding-05-1 input">
@@ -765,6 +779,7 @@
                         <SectionTitle title="Numero di articoli" i="fa-solid fa-arrow-up-1-9"/>
                         <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
                     </div>
+                    <FilterContainer/>
                     <Chart/>
                 </div>
 
@@ -780,11 +795,13 @@
                 <Routes>
                     <Route path="/" element={<Index/>}></Route>
                     <Route path="/admin" element={<Admin/>}></Route>
-                    <Route path="/social" element={<Social/>}></Route>
+
                 </Routes>
             </BrowserRouter>
         )
     }
+
+    // <Route path="/social" element={<Social/>}></Route>
 
     const root = createRoot(document.getElementById("root"));
     root.render(<App/>);
