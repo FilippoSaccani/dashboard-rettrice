@@ -7,7 +7,7 @@ from functions import *
 
 app = flask.Flask(__name__)
 
-status = {"done": False}
+status = {"done": False, "error": False}
 
 @app.route('/')
 @app.route('/admin')
@@ -64,6 +64,7 @@ def send_form_rassegna():
     try:
         global status
         status["done"] = False
+        status["error"] = False
 
         file = flask.request.files.getlist('file')[0]
         giorno = flask.request.form.get('giorno')
@@ -76,11 +77,13 @@ def send_form_rassegna():
         if not ok:
             print(error)
             status["done"] = True
+            status["error"] = True
             return error, 400
 
         if not ok:
             print(error)
             status["done"] = True
+            status["error"] = True
             return error, 400
 
         thread = threading.Thread(target=process_pdf, args=(new_filename, data, status))
@@ -95,7 +98,8 @@ def send_form_rassegna():
 @app.route('/index/all-rassegne', methods=["GET"])
 def get_all_rassegne():
     rows = select_all_rassegne()
-    return flask.jsonify([dict(row) for row in rows])
+    result = [json.loads(dict(row)['risultato']) for row in rows]
+    return flask.jsonify(result)
 
 @app.route('/index/all-temi', methods=["GET"])
 def get_all_temi():

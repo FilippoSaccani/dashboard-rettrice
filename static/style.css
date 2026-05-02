@@ -112,6 +112,10 @@ input { color: var(--color-text-primary); }
     background-color: rgb(24 119 242 / 0.7);
 }
 
+.footer-error {
+    background-color: rgb(255 75 75 / 0.7);
+}
+
 @keyframes rotazione {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -160,6 +164,10 @@ img { width: 10rem; }
 .submit[data-platform="Linkedin"] { background-color: var(--color-linkedin); }
 
 .dropzone { min-height: 200px; border: 2px dashed var(--color-text-muted); }
+
+.disabled { opacity: 30% }
+
+.disabled-filter { opacity: 50% }
 
 /*Scrollbar*/
 ::-webkit-scrollbar {

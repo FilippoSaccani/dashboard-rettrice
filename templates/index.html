@@ -117,7 +117,7 @@
 
     function Filter(props) {
         return (
-            <div className="width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "
+            <div className={"width-fit flex-center bg-main pointer rounded gap-1 padding-05-1 "+ (props.visibile ? '' : 'disabled-filter')}
                  onClick={() => props.onClick(props.line)}>
                 <i className={"fa-solid " + (props.visibile ? 'fa-minus' : 'fa-plus')}></i>
                 <p>{props.label}</p>
@@ -237,9 +237,10 @@
         )
     }
 
-    function Admin({setLoading}) {
-        const timeout = 15000;
+    function Admin({setLoading, setLoadingError}) {
+        const timeout = 13000;
         const refreshRef = React.useRef(null);
+        const loadingRef = React.useRef(false);
 
         const today = new Date().toISOString().split('T')[0];
 
@@ -328,8 +329,19 @@
             const [error, setError] = React.useState(null);
             const [file, setFile] = React.useState(null);
             const ok = React.useRef(false);
-
             const intervalRef = React.useRef(null);
+            const fileInputRef = React.useRef(null);  // ← aggiunto
+
+            const resetFile = () => {
+                setFile(null);
+                // Resetta il DOM dell'input — senza questo il browser
+                // non scatena onChange se riselezioni lo stesso file
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            };
+
+            setLoadingError(false);
 
             const handleFiles = (files) => {
                 if (files.length > 0) {
@@ -353,8 +365,10 @@
                     fetch("/status")
                         .then(res => res.json())
                         .then(data => {
-                            if (data.done) {
+                            if (data.done && !data.error) {
                                 setLoading(false);
+                                loadingRef.current = false;
+
                                 clearInterval(intervalRef.current);
                                 intervalRef.current = null;
 
@@ -367,15 +381,29 @@
 
                                 refreshRef.current?.();
                             }
+                            if (data.done && data.error) {
+                                loadingRef.current = false;
+                                clearInterval(intervalRef.current);
+                                intervalRef.current = null;
+
+                                setLoadingError(true);
+
+                                setTimeout(() => {
+                                    setLoadingError(false);
+                                    setLoading(false);
+                                }, timeout);
+                            }
                         })
                         .catch(() => {
                             setLoading(false);
+                            loadingRef.current = false;
+
                             clearInterval(intervalRef.current);
                             intervalRef.current = null;
 
                             refreshRef.current?.();
                         });
-                }, 500);
+                }, 800);
             };
 
             const sendForm = (e) => {
@@ -383,25 +411,32 @@
 
                 setMessage("");
                 setError("");
+                ok.current = false;
 
                 const formData = new FormData(e.target);
 
                 setLoading(true);
+                loadingRef.current = true;
+
                 fetch("/admin/add-rassegna", {
                     method: 'POST',
                     body: formData
                 })
                 .then(res => {
                     if (res.ok) {
-                        setFile(null);
+                        resetFile();
                         document.getElementById('data').value = today;
                         ok.current = true;
+                        startPolling();
                     } else {
                         res.text().then(text => {
                             setError(text);
                             setTimeout(() => {
                                 setError("");
                             }, timeout);
+
+                            setLoading(false);
+                            loadingRef.current = false;
                         });
                     }
                 })
@@ -410,9 +445,9 @@
                     setTimeout(() => {
                         setError("");
                     }, timeout);
-                })
-                .finally(() => {
-                    startPolling();
+
+                    setLoading(false);
+                    loadingRef.current = false;
                 });
             }
 
@@ -420,14 +455,14 @@
                 <div className="section transition rounded shadow flex-column gap-1">
                     <div>
                         <SectionTitle title="Carica rassegna stampa" i="fa-regular fa-file-lines"/>
-                        <h4>Carica un file pdf per estrarre automaticamente il numero di articoli</h4>
+                        <h4>Carica una rassegna stampa per estrarre automaticamente il numero di articoli</h4>
                     </div>
 
                     <form encType="multipart/form-data" className="flex-column gap-1" onSubmit={sendForm} autoComplete="off">
                         <label
                             className={"dropzone transition rounded flex-center width-100 pointer"}
                             onDrop={handleDrop}>
-                            <input type="file" accept=".pdf" name="file" hidden onChange={handleChange}/>
+                            <input type="file" accept=".pdf" name="file" hidden onChange={handleChange} ref={fileInputRef}/>
                             <div className="dropzone-content flex-center flex-column gap-05">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
                                      viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.5">
@@ -435,7 +470,7 @@
                                     <polyline points="17 8 12 3 7 8"/>
                                     <line x1="12" y1="3" x2="12" y2="15"/>
                                 </svg>
-                                <p className="dropzone-title">{file ? `✅ ${file.name}` : "Trascina uno o più file PDF qui"}</p>
+                                <p className="dropzone-title">{file ? `✅ ${file.name}` : "Trascina un file PDF qui"}</p>
                                 <p className="dropzone-sub">oppure clicca per selezionare</p>
                             </div>
                         </label>
@@ -445,7 +480,10 @@
                         </label>
 
                         <div className="width-fit flex-center gap-1">
-                            <input type="submit" value="Salva rassegna" className="submit pointer rounded padding-05-1"/>
+                            <input type="submit" value="Salva rassegna"
+                                   className={`submit rounded padding-05-1 ${(file && !loadingRef.current) ? 'pointer' : 'disabled'}`}
+                                   disabled={!file || loadingRef.current}
+                            />
                             {message && <p className="message">{message}</p>}
                             {error && <p className="error">{error}</p>}
                         </div>
@@ -571,118 +609,106 @@
         React.useEffect(() => {
             fetch('/index/all-rassegne')
                 .then(res => res.json())
-                .then(data => setData(data.map(d => ({
-                    ...d,
-                    giorno: new Date(d.giorno).getTime()
-                }))))
+                .then((data) => {
+                    setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()})));
+                    }
+                )
                 .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+
         }, []);
 
-        function FilterContainer(){
-            const [temiVisibili, setTemiVisibili] = React.useState([]);
+        function Chart() {
+            const lista_colori = ["blue", "green", "red", "orange", "pink", "yellow", "purple", "black"];
             const [temi, setTemi] = React.useState([]);
-            const [scaleVisibili, setScaleVisibili] = React.useState([]);
-            const [scale, setScale] = React.useState([]);
+            const [temiVisibili, setTemiVisibili] = React.useState([]);
+            const [colori, setColori] = React.useState([]);
 
             React.useEffect(() => {
                 fetch(`/index/all-temi`)
                     .then(res => res.json())
                     .then(data => {
-                        const t = [];
+                        let t = [];
                         data.forEach(tema => {
                             t.push(tema.nome);
                         })
+                        t.push("Tutti");
                         setTemi(t);
 
                         const temi_iniziali = {};
-                        temi.forEach((tema =>{
-                             temi_iniziali[tema] = true;
+                        const set_colori = {};
+                        let i=0;
+                        t.forEach((tema =>{
+                            temi_iniziali[tema] = false;
+                            set_colori[tema] = lista_colori[i];
+                            i++;
                         }))
+                        temi_iniziali["Tutti"] = true;
                         setTemiVisibili(temi_iniziali);
+                        setColori(set_colori);
                     })
                     .catch(err => console.error('Errore nel caricamento dei temi' + err))
             }, []);
 
-            React.useEffect(() => {
-                fetch(`/index/all-scale`)
-                    .then(res => res.json())
-                    .then(data => {
-                        setScale(data);
-
-                        const scale_iniziali = {};
-                        scale.forEach((scala =>{
-                             scale_iniziali[scala] = true;
-                        }))
-                        setScaleVisibili(scale_iniziali);
-                    })
-                    .catch(err => console.error('Errore nel caricamento delle scale' + err))
-            }, []);
-
             const toggleLineaTemi = (linea) => {
-                setTemiVisibili(prev => ({...prev, [linea]: !prev[linea]}));
-            };
-            const toggleLineaScale = (linea) => {
-                setScaleVisibili(prev => ({...prev, [linea]: !prev[linea]}));
+                setTemiVisibili(prev => {
+                    const updated = {
+                        ...prev,
+                        [linea]: !prev[linea]
+                    };
+
+                    const esisteAttivo = temi.some(
+                        tema => tema !== "Tutti" && updated[tema]
+                    );
+                    updated["Tutti"] = !esisteAttivo;
+
+                    return updated;
+                });
             };
 
-            return(
-                <div className="flex-column gap-1 width-100 padding-1">
-                    <div className="flex-column gap-05">
-                        <h3>Tema:</h3>
-                        <div className="flex-center width-fit gap-05">
-                            {temi.map(tema =>
-                                <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex-column gap-05">
-                        <h3>Scala:</h3>
-                        <div className="flex-center width-fit gap-05">
-                            {scale.map(scala =>
-                                <Filter key={scala} line={scala} label={scala} onClick={toggleLineaScale} visibile={scaleVisibili[scala]}/>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function Chart() {
             const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
 
             return (
-                <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={data}>
-                        <CartesianGrid/>
-                        <Line dataKey="numero_articoli" stroke="var(--color-primary)" name="Numero articoli" strokeWidth={2} isAnimationActive={false}/>
-                        <XAxis
-                            dataKey="giorno"
-                            scale="time"
-                            type="ParseInt"
-                            domain={['dataMin', 'dataMax']}
-                            tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                            })}
-                        />
-                        <Brush
-                            dataKey="giorno"
-                            height={20}
-                            stroke="var(--color-text-muted)"
-                            travellerWidth={10}
-                            startIndex={startIndex}
-                            tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                            })}
-                        />
-                        <YAxis mirror={useIsMobile()}/>/>
-                        <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
-                        <Legend align="right" />
-                    </LineChart>
-                </ResponsiveContainer>
+                <div className="flex-column gap-1">
+                    <div className="flex-center width-fit gap-05">
+                        {temi.filter(tema => tema !== "Tutti").map(tema =>
+                            <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
+                        )}
+                    </div>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <LineChart data={data}>
+                            <CartesianGrid/>
+                            {temi.map(tema =>
+                                <Line hide={!temiVisibili[tema]} dataKey={tema} stroke={colori[tema]} name={tema} strokeWidth={2} isAnimationActive={false}/>
+                            )}
+                            <XAxis
+                                dataKey="giorno"
+                                scale="time"
+                                type="ParseInt"
+                                domain={['dataMin', 'dataMax']}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <Brush
+                                dataKey="giorno"
+                                height={20}
+                                stroke="var(--color-text-muted)"
+                                travellerWidth={10}
+                                startIndex={startIndex}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <YAxis mirror={useIsMobile()}/>/>
+                            <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
+                            <Legend align="right" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
             );
         }
 
@@ -841,10 +867,9 @@
 
                 <div className="section transition rounded shadow flex-column gap-1">
                     <div>
-                        <SectionTitle title="Numero di articoli" i="fa-solid fa-arrow-up-1-9"/>
+                        <SectionTitle title="Numero di articoli per tema" i="fa-solid fa-arrow-up-1-9"/>
                         <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
                     </div>
-                    <FilterContainer/>
                     <Chart/>
                 </div>
 
@@ -853,16 +878,31 @@
         )
     }
 
-    function Footer(){
+    function Footer({error}){
         return(
-            <div className="footer width-100">
+            <div className={`footer width-100 ${(error) ? 'footer-error' : ''}`}>
                 <div className="width-fit flex-center color-white gap-1">
-                    <i className="fa-solid fa-circle-notch icona-spin"></i>
-                    <h3>I dati inseriti sono in fase di elaborazione . . .</h3>
+                    {!error && <i className="fa-solid fa-circle-notch icona-spin"></i>}
+                    {!error && <h3>La rassegna stampa inserita è in fase di elaborazione . . .</h3>}
+                    {error && <i class="fa-solid fa-triangle-exclamation"></i>}
+                    {error && <h3>Non è stato possibile processare la rassegna stampa, riprovare . . .</h3>}
                 </div>
             </div>
         );
     }
+
+    const errorManager = {
+        value: false,
+        listeners: new Set(),
+        set(val) {
+            this.value = val;
+            this.listeners.forEach(fn => fn(val));
+        },
+        subscribe(fn) {
+            this.listeners.add(fn);
+            return () => this.listeners.delete(fn);
+        }
+    };
 
     const loadingManager = {
         value: false,
@@ -879,24 +919,33 @@
 
     function ManagedFooter() {
         const [isVisible, setIsVisible] = React.useState(loadingManager.value);
+        const [error, setError] = React.useState(errorManager.value)
 
         React.useEffect(() => {
-            // Si sottoscrive ai cambiamenti solo per questo componente
-            return loadingManager.subscribe(setIsVisible);
+            // Sottoscrizione a entrambi i manager
+            const unsubscribeLoading = loadingManager.subscribe(setIsVisible);
+            const unsubscribeError = errorManager.subscribe(setError);
+
+            // Funzione di cleanup che le esegue entrambe quando il componente viene smontato
+            return () => {
+                unsubscribeLoading();
+                unsubscribeError();
+            };
         }, []);
 
-        return isVisible ? <Footer /> : null;
+        return isVisible ? <Footer error={error}/> : null;
     }
 
     function App() {
         const setLoading = (val) => loadingManager.set(val);
+        const setLoadingError = (val) => errorManager.set(val);
 
         return (
             <BrowserRouter>
                 <NavBar/>
                 <Routes>
                     <Route path="/" element={<Index/>}></Route>
-                    <Route path="/admin" element={<Admin setLoading={setLoading}/>}></Route>
+                    <Route path="/admin" element={<Admin setLoading={setLoading} setLoadingError={setLoadingError}/>}></Route>
                     <Route path="/social" element={<Social/>}></Route>
                 </Routes>
                 <ManagedFooter/>

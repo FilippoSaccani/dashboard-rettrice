@@ -134,8 +134,8 @@ def _estimate_importance_from_text(text: str) -> float:
     return 5.0  # default medio se non troviamo numeri
 
 #LIVELLO 3
-SYSTEM_PROMPT = """Sei un esperto di media italiani. 
-Data una testata giornalistica, rispondi SOLO con un JSON valido, 
+SYSTEM_PROMPT = """Sei un esperto di media italiani e internazionali.
+Data una testata giornalistica, rispondi SOLO con un JSON valido,
 senza markdown e senza spiegazioni.
 
 Schema obbligatorio:
@@ -145,15 +145,68 @@ Schema obbligatorio:
   "reasoning": "<max 20 parole>"
 }
 
-Criteri per importanza:
-- 9-10: grandi quotidiani nazionali (Corriere, Repubblica, Sole 24 Ore)
-- 7-8:  quotidiani nazionali medi o grandi testate locali regionali
-- 5-6:  testate locali con buona diffusione provinciale
-- 3-4:  testate locali piccole, blog locali noti
-- 1-2:  siti iperlocali, newsletter, agenzie piccole
+Criteri per SCALA:
+- Locale: copertura di una città, provincia o regione
+- Nazionale: copertura dell'intero territorio italiano
+- Internazionale: copertura multinazionale o globale
+
+Criteri per IMPORTANZA — considera il REACH EFFETTIVO, non il prestigio editoriale:
+- 9-10: reach enorme (decine di milioni di lettori/mese)
+         Es: MSN, Yahoo News, Google News, Corriere della Sera, Repubblica
+- 8-9:  reach molto alto (milioni di lettori/mese)
+         Es: Sole 24 Ore, La Stampa, TgCom24, HuffPost Italia
+- 7-8:  reach alto (centinaia di migliaia/mese)
+         Es: Il Fatto Quotidiano, Avvenire, testate regionali principali
+- 5-6:  reach medio, buona diffusione provinciale o settoriale
+         Es: gazzette locali importanti, testate di settore
+- 3-4:  reach limitato, testate iperlocali o di nicchia
+- 1-2:  blog, newsletter, agenzie piccole
+
+IMPORTANTE: gli aggregatori di notizie (MSN, Yahoo News, Google News, Flipboard)
+hanno reach elevatissimo anche se non producono contenuti originali.
+Valutali per il loro traffico reale, non per la qualità editoriale.
 """
 
-def llm_classify(testata_name: str, snippets: list[str] | None = None) -> TestataPrediction:
+def check_ollama_available(model: str = 'gemma3') -> tuple[bool, str]:
+    """
+    Verifica che Ollama sia attivo e che il modello richiesto sia disponibile.
+    Restituisce (ok, messaggio).
+    """
+    # Controlla che il server risponda
+    try:
+        httpx.get('http://localhost:11434', timeout=2.0)
+    except httpx.ConnectError:
+        return False, (
+            'Ollama non è in esecuzione. '
+            'Avvialo con: ollama serve'
+        )
+
+    # Controlla che il modello sia scaricato
+    try:
+        models = ollama.list()
+        available = [m.model for m in models.models]
+        # Normalizza: 'gemma3:latest' contiene 'gemma3'
+        if not any(model in m for m in available):
+            return False, (
+                f'Modello "{model}" non trovato. '
+                f'Scaricalo con: ollama pull {model}\n'
+                f'Modelli disponibili: {", ".join(available) or "nessuno"}'
+            )
+    except Exception as e:
+        return False, f'Errore nel recupero dei modelli: {e}'
+
+    return True, f'Ollama attivo, modello "{model}" disponibile.'
+
+
+def llm_classify(testata_name: str, snippets: list[str] | None = None, model: str = 'gemma3') -> TestataPrediction:
+    # Health check prima della chiamata
+    ok, msg = check_ollama_available(model)
+    if not ok:
+        print(f'[WARN] LLM non disponibile: {msg}')
+        print('[INFO] Uso fallback neutro.')
+        # Fallback: ritorna stima neutra invece di crashare
+        return TestataPrediction('Nazionale', 5.0, 0.1, 'fallback_no_ollama')
+
     context = f'Testata: "{testata_name}"'
     if snippets:
         context += f'\n\nContesto trovato online:\n' + '\n'.join(f'- {s}' for s in snippets)

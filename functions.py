@@ -1,6 +1,6 @@
 import os
 from datetime import date
-from time import time
+from time import time, sleep
 from collections import defaultdict
 import pdfplumber
 
@@ -49,11 +49,15 @@ def save_pdf(file, data, new_filename):
 
         full_path = os.path.join(folder, new_filename)
 
+        print(full_path)
+
         # Controllo esplicito se il file esiste
         if os.path.exists(full_path):
-            return False, "Errore: duplicato"
+            return False, "Questa rassegna è già stata inserita"
 
         file.save(os.path.join(folder, new_filename))
+        file.flush()  # Passa i dati al sistema operativo
+        os.fsync(file.fileno()) # Forza la scrittura fisica sul disco
         return True, ""
     except Exception:
         return False, "Errore nell'archiviazione del file"
@@ -110,8 +114,12 @@ def extract_articles(filename, data):
 
 @timer
 def process_pdf(filename, data, status):
-    articles = extract_articles(filename, data)
+    path = get_pdf_folder(data)
+
+    sleep(0.3)
+
     try:
+        articles = extract_articles(filename, data)
         temi = select_all_temi()
         temi = [r[0] for r in temi]
 
@@ -128,6 +136,10 @@ def process_pdf(filename, data, status):
 
                 if not ok:
                     print("Tema: ", error)
+                    status["done"] = True
+                    status["error"] = True
+                    delete_pdf(os.path.join(path, filename))
+
                     return ok, error
 
                 temi = select_all_temi()
@@ -136,7 +148,11 @@ def process_pdf(filename, data, status):
                 ok, error = handle_new_testata(testata)
 
                 if not ok:
-                    print(error)
+                    print("Testata: ", error)
+                    status["done"] = True
+                    status["error"] = True
+                    delete_pdf(os.path.join(path, filename))
+
                     return ok, error
 
                 testate = select_all_testate()
@@ -144,11 +160,20 @@ def process_pdf(filename, data, status):
             ok, error = insert_articolo(filename, tema, testata)
 
             if not ok:
-                print("Testata: ", error)
+                print("Database: ", error)
+                status["done"] = True
+                status["error"] = True
+                delete_pdf(os.path.join(path, filename))
+
                 return ok, error
     except Exception as e:
         print(f'Errore: {e}')
+        status["done"] = True
+        status["error"] = True
+        delete_pdf(os.path.join(path, filename))
+
         return False, e
 
     status["done"] = True
+    status["error"] = False
     return True, ''
