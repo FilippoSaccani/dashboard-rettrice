@@ -604,50 +604,56 @@
     }
 
     function Index() {
+        const lista_colori = ["blue", "green", "red", "orange", "pink", "yellow", "purple", "black"];
         const [data, setData] = React.useState([]);
+        const [temi, setTemi] = React.useState([]);
+        const [colori, setColori] = React.useState([]);
+        const [temiVisibiliIniziali, setTemiVisibiliIniziali] = React.useState([]);
+
+        const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
 
         React.useEffect(() => {
             fetch('/index/all-rassegne')
                 .then(res => res.json())
-                .then((data) => {
-                    setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()})));
-                    }
-                )
+                .then((data) => setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()}))))
                 .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
-
         }, []);
 
-        function Chart() {
-            const lista_colori = ["blue", "green", "red", "orange", "pink", "yellow", "purple", "black"];
-            const [temi, setTemi] = React.useState([]);
-            const [temiVisibili, setTemiVisibili] = React.useState([]);
-            const [colori, setColori] = React.useState([]);
+        React.useEffect(() => {
+            fetch(`/index/all-temi`)
+                .then(res => res.json())
+                .then(data => {
+                    const t = data.map(tema => tema.nome);
+                    t.push("Tutti");
+                    setTemi(t);
 
-            React.useEffect(() => {
-                fetch(`/index/all-temi`)
-                    .then(res => res.json())
-                    .then(data => {
-                        let t = [];
-                        data.forEach(tema => {
-                            t.push(tema.nome);
-                        })
-                        t.push("Tutti");
-                        setTemi(t);
+                    const temi_iniziali = {};
+                    const set_colori = {};
+                    let i=0;
+                    t.forEach((tema =>{
+                        temi_iniziali[tema] = false;
+                        set_colori[tema] = lista_colori[i];
+                        i++;
+                    }))
+                    temi_iniziali["Tutti"] = true;
+                    setTemiVisibiliIniziali(temi_iniziali);
+                    setColori(set_colori);
+                })
+                .catch(err => console.error('Errore nel caricamento dei temi' + err))
+        }, []);
 
-                        const temi_iniziali = {};
-                        const set_colori = {};
-                        let i=0;
-                        t.forEach((tema =>{
-                            temi_iniziali[tema] = false;
-                            set_colori[tema] = lista_colori[i];
-                            i++;
-                        }))
-                        temi_iniziali["Tutti"] = true;
-                        setTemiVisibili(temi_iniziali);
-                        setColori(set_colori);
-                    })
-                    .catch(err => console.error('Errore nel caricamento dei temi' + err))
-            }, []);
+        function FilterContainer({toggleLineaTemi, temiVisibili}){
+            return(
+                <div className="flex-center width-fit gap-05">
+                    {temi.filter(tema => tema !== "Tutti").map(tema =>
+                        <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
+                    )}
+                </div>
+            )
+        }
+
+        function Chart1() {
+            const [temiVisibili, setTemiVisibili] = React.useState(temiVisibiliIniziali);
 
             const toggleLineaTemi = (linea) => {
                 setTemiVisibili(prev => {
@@ -665,15 +671,9 @@
                 });
             };
 
-            const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
-
             return (
                 <div className="flex-column gap-1">
-                    <div className="flex-center width-fit gap-05">
-                        {temi.filter(tema => tema !== "Tutti").map(tema =>
-                            <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
-                        )}
-                    </div>
+                    <FilterContainer toggleLineaTemi={toggleLineaTemi} temiVisibili={temiVisibili}/>
                     <ResponsiveContainer width="100%" height={400}>
                         <LineChart data={data}>
                             <CartesianGrid/>
@@ -710,6 +710,16 @@
                     </ResponsiveContainer>
                 </div>
             );
+        }
+
+        function Chart2(){
+            const [temiVisibili, setTemiVisibili] = React.useState(temiVisibiliIniziali);
+            return(
+                <div className="flex-column gap-1">
+
+
+                </div>
+            )
         }
 
         function RassegnaItem(props) {
@@ -867,10 +877,18 @@
 
                 <div className="section transition rounded shadow flex-column gap-1">
                     <div>
-                        <SectionTitle title="Numero di articoli per tema" i="fa-solid fa-arrow-up-1-9"/>
+                        <SectionTitle title="Numero articoli per tema" i="fa-solid fa-arrow-up-1-9"/>
                         <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
                     </div>
-                    <Chart/>
+                    <Chart1/>
+                </div>
+
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <div>
+                        <SectionTitle title="Numero articoli per scala" i="fa-solid fa-arrow-up-1-9"/>
+                        <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
+                    </div>
+                    <Chart2/>
                 </div>
 
                 <RicercaRassegne />
