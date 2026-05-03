@@ -68,6 +68,7 @@ label, h4, .dropzone-content{ color: var(--color-text-secondary); font-weight: 3
 
 h2, h3, h4, .right > a > i, span, label { font-size: 1.2rem; }
 h1 { font-size: 2rem; }
+p {text-align: justify}
 
 /*Colori*/
 .message { color: green; }
@@ -82,6 +83,9 @@ input { color: var(--color-text-primary); }
 .padding-05-1, input { padding: 0.5rem 1rem; }
 .padding-1 { padding: 1rem; }
 .content { padding: 7rem 15rem 4rem 15rem; width: 100vw }
+
+/*Margin*/
+mark { margin: 0 0.5ch }
 
 /*Altro*/
 .rounded { border-radius: 5px; }
@@ -132,7 +136,7 @@ img { width: 10rem; }
 
 .transition { transition: 0.2s ease; }
 
-.unselected, ol, .dropzone-title  { color: var(--color-text-secondary) }
+.unselected, ol, .dropzone-title, .secondary  { color: var(--color-text-secondary) }
 
 .unselected:hover, .dropzone:hover { color: var(--color-text-primary); background-color: var(--color-hover); }
 
@@ -167,7 +171,7 @@ img { width: 10rem; }
 
 .disabled { opacity: 30% }
 
-.disabled-filter { opacity: 50% }
+.disabled-filter { opacity: 43% }
 
 /*Scrollbar*/
 ::-webkit-scrollbar {

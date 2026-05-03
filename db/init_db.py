@@ -7,10 +7,19 @@ cursor.execute("PRAGMA foreign_keys = ON;")
 
 cursor.executescript('''
     CREATE TABLE IF NOT EXISTS rassegna (
-        nome_file TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome_file TEXT UNIQUE NOT NULL,
         giorno TEXT UNIQUE NOT NULL,
         numero_articoli INTEGER NOT NULL,
-        data_salvataggio TEXT NOT NULL
+        data_salvataggio TEXT NOT NULL,
+        testo TEXT NOT NULL
+    );
+    
+    CREATE VIRTUAL TABLE IF NOT EXISTS rassegne_fts USING fts5(
+        testo,
+        nome_file,
+        content='rassegna',    -- tabella sorgente (il nome della tua tabella rassegne)
+        content_rowid='id'     -- chiave primaria della tabella sorgente
     );
     
     CREATE TABLE IF NOT EXISTS social (
@@ -30,15 +39,20 @@ cursor.executescript('''
 
     CREATE TABLE IF NOT EXISTS testata(
         nome TEXT PRIMARY KEY,
-        scala TEXT CHECK (scala IN ('Locale', 'Nazionale', 'Internazionale')) NOT NULL, 
         importanza REAL NOT NULL DEFAULT 3,
         verificata INTEGER NOT NULL DEFAULT 1,
         metodo_class TEXT NOT NULL DEFAULT 'manuale',
         confidence REAL NOT NULL DEFAULT 10,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        fk_scala TEXT NOT NULL,
+        FOREIGN KEY (fk_scala) REFERENCES scala(nome)
     );
         
     CREATE TABLE IF NOT EXISTS tema (
+        nome TEXT PRIMARY KEY
+    );
+    
+    CREATE TABLE IF NOT EXISTS scala(
         nome TEXT PRIMARY KEY
     );
         
@@ -48,7 +62,7 @@ cursor.executescript('''
         fk_rassegna TEXT NOT NULL,
         fk_testata TEXT NOT NULL,
         FOREIGN KEY(fk_tema) REFERENCES tema(nome),
-        FOREIGN KEY(fk_rassegna) REFERENCES rassegna(nome_file),
+        FOREIGN KEY(fk_rassegna) REFERENCES rassegna(id),
         FOREIGN KEY(fk_testata) REFERENCES testata(nome)
     );
     
@@ -60,6 +74,10 @@ cursor.executescript('''
     INSERT INTO tema VALUES ('Intelligenza Artificiale e tecnologie');
     INSERT INTO tema VALUES ('Ateneo');
     INSERT INTO tema VALUES ('Politica Locale');
+    
+    INSERT INTO scala VALUES ('Locale');
+    INSERT INTO scala VALUES ('Nazionale');
+    INSERT INTO scala VALUES ('Internazionale');
         
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2024-01-03', 980, 112, 15, 'Instagram', CURRENT_TIMESTAMP);
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2024-01-10', 1050, 98, 22, 'Instagram', CURRENT_TIMESTAMP);
@@ -347,7 +365,7 @@ cursor.executescript('''
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2026-04-11', 19410, 2912, 1452, 'Linkedin', CURRENT_TIMESTAMP);
     INSERT INTO dati_social (giorno, visualizzazioni, interazioni, follower, fk_social, data_salvataggio) VALUES ('2026-04-20', 19900, 2985, 1490, 'Linkedin', CURRENT_TIMESTAMP);
     
-    INSERT OR IGNORE INTO testata (nome, scala, importanza) VALUES 
+    INSERT OR IGNORE INTO testata (nome, fk_scala, importanza) VALUES 
     
     -- --- TESTATE DALLA TUA RASSEGNA STAMPA ---
     ('Avvenire', 'Nazionale', 7), -- Rilevata nel documento (Pag. 9)

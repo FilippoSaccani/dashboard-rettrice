@@ -244,7 +244,7 @@ def llm_classify(testata_name: str, snippets: list[str] | None = None, model: st
 def get_or_classify_testata(testata_name: str, db_conn: sqlite3.Connection, save_if_new: bool = True) -> TestataPrediction:
     # 0. Controlla nel DB
     cur = db_conn.execute(
-        'SELECT scala, importanza FROM testata WHERE nome = ? COLLATE NOCASE',
+        'SELECT fk_scala, importanza FROM testata WHERE nome = ? COLLATE NOCASE',
         (testata_name,)
     )
     row = cur.fetchone()
@@ -268,7 +268,7 @@ def get_or_classify_testata(testata_name: str, db_conn: sqlite3.Connection, save
     if save_if_new:
         db_conn.execute('''
                         INSERT OR IGNORE INTO testata
-                        (nome, scala, importanza, verificata, metodo_class, created_at)
+                        (nome, fk_scala, importanza, verificata, metodo_class, created_at)
                         VALUES (?, ?, ?, 0, ?, ?)
                         ''', (
                             testata_name,

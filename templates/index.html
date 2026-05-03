@@ -238,9 +238,9 @@
     }
 
     function Admin({setLoading, setLoadingError}) {
-        const timeout = 13000;
-        const refreshRef = React.useRef(null);
+        const timeout = 15000;
         const loadingRef = React.useRef(false);
+        const refreshRef = React.useRef(null);
 
         const today = new Date().toISOString().split('T')[0];
 
@@ -380,6 +380,7 @@
                                 }
 
                                 refreshRef.current?.();
+                                refreshManager.trigger();  // ← aggiunto
                             }
                             if (data.done && data.error) {
                                 loadingRef.current = false;
@@ -402,6 +403,7 @@
                             intervalRef.current = null;
 
                             refreshRef.current?.();
+                            refreshManager.trigger();  // ← aggiunto
                         });
                 }, 800);
             };
@@ -496,6 +498,7 @@
             const [latestContent, setLatestContent] = React.useState(null);
             const [message, setMessage] = React.useState("");
             const [error, setError] = React.useState("");
+
             const [refreshKey, setRefreshKey] = React.useState(false);
 
             React.useEffect(() => {
@@ -604,11 +607,15 @@
     }
 
     function Index() {
-        const lista_colori = ["blue", "green", "red", "orange", "pink", "yellow", "purple", "black"];
+        const colori = ["blue", "green", "red", "orange", "purple", "pink", "yellow", "black"];
         const [data, setData] = React.useState([]);
         const [temi, setTemi] = React.useState([]);
-        const [colori, setColori] = React.useState([]);
         const [temiVisibiliIniziali, setTemiVisibiliIniziali] = React.useState([]);
+        const [refreshKey, setRefreshKey] = React.useState(0);  // ← aggiunto
+
+        React.useEffect(() => {
+            return refreshManager.subscribe(setRefreshKey);
+        }, []);
 
         const startIndex = data.findIndex(d => d.giorno >= seiMesiFa());
 
@@ -617,42 +624,34 @@
                 .then(res => res.json())
                 .then((data) => setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()}))))
                 .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
-        }, []);
+        }, [refreshKey]);
 
         React.useEffect(() => {
             fetch(`/index/all-temi`)
                 .then(res => res.json())
                 .then(data => {
-                    const t = data.map(tema => tema.nome);
-                    t.push("Tutti");
-                    setTemi(t);
+                    data.push("Totale");
+                    setTemi(data);
 
                     const temi_iniziali = {};
-                    const set_colori = {};
-                    let i=0;
-                    t.forEach((tema =>{
-                        temi_iniziali[tema] = false;
-                        set_colori[tema] = lista_colori[i];
-                        i++;
-                    }))
-                    temi_iniziali["Tutti"] = true;
+                    data.forEach((tema => temi_iniziali[tema] = false))
+                    temi_iniziali["Totale"] = true;
                     setTemiVisibiliIniziali(temi_iniziali);
-                    setColori(set_colori);
                 })
                 .catch(err => console.error('Errore nel caricamento dei temi' + err))
         }, []);
 
         function FilterContainer({toggleLineaTemi, temiVisibili}){
             return(
-                <div className="flex-center width-fit gap-05">
-                    {temi.filter(tema => tema !== "Tutti").map(tema =>
+                <div className="flex gap-1 filter">
+                    {temi.filter(tema => tema !== "Totale").map(tema =>
                         <Filter key={tema} line={tema} label={tema} onClick={toggleLineaTemi} visibile={temiVisibili[tema]}/>
                     )}
                 </div>
             )
         }
 
-        function Chart1() {
+        function Chart1({ refreshKey }) {
             const [temiVisibili, setTemiVisibili] = React.useState(temiVisibiliIniziali);
 
             const toggleLineaTemi = (linea) => {
@@ -663,9 +662,9 @@
                     };
 
                     const esisteAttivo = temi.some(
-                        tema => tema !== "Tutti" && updated[tema]
+                        tema => tema !== "Totale" && updated[tema]
                     );
-                    updated["Tutti"] = !esisteAttivo;
+                    updated["Totale"] = !esisteAttivo;
 
                     return updated;
                 });
@@ -677,8 +676,8 @@
                     <ResponsiveContainer width="100%" height={400}>
                         <LineChart data={data}>
                             <CartesianGrid/>
-                            {temi.map(tema =>
-                                <Line hide={!temiVisibili[tema]} dataKey={tema} stroke={colori[tema]} name={tema} strokeWidth={2} isAnimationActive={false}/>
+                            {temi.map((tema, i) =>
+                                <Line hide={!temiVisibili[tema]} dataKey={tema} stroke={colori[i]} name={tema} strokeWidth={2} isAnimationActive={false}/>
                             )}
                             <XAxis
                                 dataKey="giorno"
@@ -712,31 +711,214 @@
             );
         }
 
-        function Chart2(){
+        function Chart2({ refreshKey }){
+            const [scale, setScale] = React.useState([]);
+            const [data, setData] = React.useState([]);
             const [temiVisibili, setTemiVisibili] = React.useState(temiVisibiliIniziali);
+
+            React.useEffect(() => {
+                fetch('/index/all-scale')
+                    .then(res => res.json())
+                    .then((data) => setScale(data))
+                    .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+            }, []);
+
+            React.useEffect(() => {
+                fetch('/index/all-rassegne-per-scala')
+                    .then(res => res.json())
+                    .then((data) => setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()}))))
+                    .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+            }, []);
+
+            const toggleLineaTemi = (linea) => {
+                setTemiVisibili(prev => ({...prev, [linea]: !prev[linea]}));
+            };
+
+            const dataFiltrata = data.map(row => {
+                const nuovo = { giorno: row.giorno };
+
+                scale.forEach(scala => {
+                    const datiScala = row[scala];
+
+                    if (!datiScala) {
+                        nuovo[scala] = 0;
+                        return;
+                    }
+
+                    let valore = 0;
+
+                    const temiAttivi = Object.keys(temiVisibili).filter(
+                        t => t !== "Totale" && temiVisibili[t]
+                    );
+
+                    if (temiAttivi.length === 0) {
+                        valore = datiScala.totale;
+                    } else {
+                        temiAttivi.forEach(tema => {
+                            valore += datiScala[tema] || 0;
+                        });
+                    }
+
+                    nuovo[scala] = valore;
+                });
+
+                return nuovo;
+            });
+
             return(
                 <div className="flex-column gap-1">
-
-
+                    <FilterContainer toggleLineaTemi={toggleLineaTemi} temiVisibili={temiVisibili}/>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <LineChart data={dataFiltrata}>
+                            <CartesianGrid/>
+                            {scale.map((scala, i) =>
+                                <Line dataKey={scala} stroke={colori[i]} name={scala} strokeWidth={2} isAnimationActive={false}/>
+                            )}
+                            <XAxis
+                                dataKey="giorno"
+                                scale="time"
+                                type="ParseInt"
+                                domain={['dataMin', 'dataMax']}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <Brush
+                                dataKey="giorno"
+                                height={20}
+                                stroke="var(--color-text-muted)"
+                                travellerWidth={10}
+                                startIndex={startIndex}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <YAxis mirror={useIsMobile()}/>/>
+                            <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
+                            <Legend align="right" />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
             )
         }
 
-        function RassegnaItem(props) {
-            console.log(props);
-            const URL = "/general/file?filename=" + props.nome + "&data=" + props.giorno;
+        function Chart3({ refreshKey }){
+            const [temiVisibili, setTemiVisibili] = React.useState(temiVisibiliIniziali);
+            const [testate, setTestate] = React.useState([]);
+            const [data, setData] = React.useState([]);
+
+            React.useEffect(() => {
+                fetch('/index/all-testate-importanti')
+                    .then(res => res.json())
+                    .then((data) => setTestate(data))
+                    .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+            }, []);
+
+            React.useEffect(() => {
+                fetch('/index/all-rassegne-per-testata')
+                    .then(res => res.json())
+                    .then((data) => setData(data.map(d => ({...d, giorno: new Date(d.giorno).getTime()}))))
+                    .catch(err => console.error('Errore nel caricamento dei dati: ' + err))
+            }, []);
+
+            const toggleLineaTemi = (linea) => {
+                setTemiVisibili(prev => ({...prev, [linea]: !prev[linea]}));
+            };
+
+            const dataFiltrata = data.map(row => {
+                const nuovo = { giorno: row.giorno };
+
+                const temiAttivi = Object.keys(temiVisibili)
+                    .filter(t => t !== "Totale" && temiVisibili[t]);
+
+                testate.forEach(testata => {
+                    const datiTestata = row[testata];
+
+                    if (!datiTestata) {
+                        nuovo[testata] = 0;
+                        return;
+                    }
+
+                    if (temiAttivi.length === 0) {
+                        nuovo[testata] = datiTestata.totale || 0;
+                    }
+                    else {
+                        let somma = 0;
+
+                        temiAttivi.forEach(tema => {
+                            somma += datiTestata[tema] || 0;
+                        });
+
+                        nuovo[testata] = somma;
+                    }
+                });
+
+                return nuovo;
+            });
+
+            return(
+                <div className="flex-column gap-1">
+                    <FilterContainer toggleLineaTemi={toggleLineaTemi} temiVisibili={temiVisibili}/>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <LineChart data={dataFiltrata}>
+                            <CartesianGrid/>
+                            {testate.map((testata, i) =>
+                                <Line key={testata} dataKey={testata} stroke={colori[i]} name={testata} strokeWidth={2} isAnimationActive={false}/>
+                            )}
+                            <XAxis
+                                dataKey="giorno"
+                                scale="time"
+                                type="ParseInt"
+                                domain={['dataMin', 'dataMax']}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <Brush
+                                dataKey="giorno"
+                                height={20}
+                                stroke="var(--color-text-muted)"
+                                travellerWidth={10}
+                                startIndex={startIndex}
+                                tickFormatter={(data) => new Date(data).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                })}
+                            />
+                            <YAxis mirror={useIsMobile()}/>/>
+                            <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString("it-IT")}/>
+                            <Legend align="right" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            )
+        }
+
+        function RassegnaItem({giorno, nome, numero_articoli, snippet}) {
+            const URL = "/general/file?filename=" + nome + "&data=" + giorno;
+            const snippetHtml = { __html: snippet };  // ← estrai qui
 
             return (
-                <div className="flex-between transition flex-center rounded width-100 bg-main padding-05-1">
-                    <div className="width-66 flex">
-                        <p className="width-50">{props.nome}</p>
-                        <p id="date-list-item" className="width-50 flex-center">{props.giorno}</p>
-                    </div>
+                <div className="flex-column transition rounded width-100 bg-main padding-05-1">
+                    <div className="flex-between flex-center">
+                        <div className="width-66 flex">
+                            <p className="width-50">{nome}</p>
+                            <p id="date-list-item" className="width-50 flex-center">{giorno}</p>
+                        </div>
 
-                    <div className="flex gap-1">
-                        <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} download><i className="fa-solid fa-download"></i></a>
-                        <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} target="_blank" rel="noreferrer"><i className="fa-solid fa-eye"></i></a>
+                        <div className="flex">
+                            <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} download><i className="fa-solid fa-download"></i></a>
+                            <a className="padding-1 transition flex-center pointer rounded unselected" href={URL} target="_blank" rel="noreferrer"><i className="fa-solid fa-eye"></i></a>
+                        </div>
                     </div>
+                    { snippet && <p className="secondary width-100" dangerouslySetInnerHTML={snippetHtml}></p> }
                 </div>
             )
         }
@@ -751,7 +933,21 @@
                 const parsed = parseDateInput(e.target.value);
 
                 if (!parsed.valid && e.target.value.length > 0) {
-                    setError("Formato non valido");
+                    fetch(`/index/search-rassegne?q=${e.target.value}` )
+                    .then(res => res.json())
+                    .then((data) => {
+                        setError(null);
+
+                        let dataComponents = [];
+                        for (let cur of data) {
+                            dataComponents.push(<RassegnaItem key={cur.giorno} giorno={new Date(cur.giorno).toLocaleDateString('it-IT')} nome={cur.nome_file} numero_articoli={cur.numero_articoli} snippet={cur.snippet}/>);
+                        }
+                        setContent(dataComponents);
+                    })
+                    .catch((err) => {
+                        setError('Errore nella ricerca');
+                        console.log(err);
+                    })
                 } else if (parsed.valid) {
                     setError(null);
                     const filteredRassegne = filterData(data, parsed);
@@ -846,14 +1042,14 @@
                 <div className="section transition rounded width-100 shadow flex-column gap-1">
                     <div>
                         <SectionTitle title="Cerca rassegne stampa" i="fa-regular fa-file-lines"/>
-                        <h4>Cerca per data: AAAA o MM/AAAA o GG/MM/AAAA o per parola chiave</h4>
+                        <h4>Cerca per parola chiave o per data (AAAA o MM/AAAA o GG/MM/AAAA)</h4>
                     </div>
 
                     <div className="flex-center flex-between width-100 rounded padding-05-1 input">
                         <div className="flex-center width-80">
                             <i className="fa-solid fa-magnifying-glass color-primary"></i>
                             <input type="text" id="cerca"
-                                   placeholder="Inserisci la data..."
+                                   placeholder="Inserisci la data o la parola chiave..."
                                    value={value}
                                    onChange={handleChange}
                                    className="width-100"
@@ -880,7 +1076,7 @@
                         <SectionTitle title="Numero articoli per tema" i="fa-solid fa-arrow-up-1-9"/>
                         <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
                     </div>
-                    <Chart1/>
+                    <Chart1 refreshKey={refreshKey}/>
                 </div>
 
                 <div className="section transition rounded shadow flex-column gap-1">
@@ -888,9 +1084,16 @@
                         <SectionTitle title="Numero articoli per scala" i="fa-solid fa-arrow-up-1-9"/>
                         <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
                     </div>
-                    <Chart2/>
+                    <Chart2 refreshKey={refreshKey}/>
                 </div>
 
+                <div className="section transition rounded shadow flex-column gap-1">
+                    <div>
+                        <SectionTitle title="Numero articoli per testata più importante" i="fa-solid fa-arrow-up-1-9"/>
+                        <h4>Scorri la barra sotto al grafico per regolare lo zoom</h4>
+                    </div>
+                    <Chart3 refreshKey={refreshKey}/>
+                </div>
                 <RicercaRassegne />
             </div>
         )
@@ -935,6 +1138,19 @@
         }
     };
 
+    const refreshManager = {
+        value: 0,
+        listeners: new Set(),
+        trigger() {
+            this.value += 1;
+            this.listeners.forEach(fn => fn(this.value));
+        },
+        subscribe(fn) {
+            this.listeners.add(fn);
+            return () => this.listeners.delete(fn);
+        }
+    };
+
     function ManagedFooter() {
         const [isVisible, setIsVisible] = React.useState(loadingManager.value);
         const [error, setError] = React.useState(errorManager.value)
@@ -957,6 +1173,7 @@
     function App() {
         const setLoading = (val) => loadingManager.set(val);
         const setLoadingError = (val) => errorManager.set(val);
+        const setRefresh = (val) => refreshManager.set(val);
 
         return (
             <BrowserRouter>

@@ -1,5 +1,4 @@
 import threading
-from datetime import datetime
 import flask
 from flask import send_file
 
@@ -98,18 +97,47 @@ def send_form_rassegna():
 @app.route('/index/all-rassegne', methods=["GET"])
 def get_all_rassegne():
     rows = select_all_rassegne()
-    result = [json.loads(dict(row)['risultato']) for row in rows]
-    return flask.jsonify(result)
+    return flask.jsonify([json.loads(dict(row)['risultato']) for row in rows])
+
+@app.route('/index/all-rassegne-per-scala', methods=["GET"])
+def get_all_rassegne_per_scala():
+    rows = select_rassegne_per_scala()
+    return flask.jsonify([json.loads(dict(row)['risultato']) for row in rows])
+
+@app.route('/index/all-rassegne-per-testata', methods=["GET"])
+def get_all_rassegne_per_testata():
+    rows = select_rassegne_per_testata()
+    print([json.loads(dict(row)['risultato']) for row in rows])
+    return flask.jsonify([json.loads(dict(row)['risultato']) for row in rows])
 
 @app.route('/index/all-temi', methods=["GET"])
 def get_all_temi():
     rows = select_all_temi()
-    return flask.jsonify([dict(row) for row in rows])
+    return flask.jsonify([dict(row)['nome'] for row in rows])
 
 @app.route('/index/all-scale', methods=["GET"])
 def get_all_scale():
-    rows = ['Locale', 'Nazionale', 'Internazionale']
-    return flask.jsonify(rows)
+    rows = select_all_scale()
+    return flask.jsonify([dict(row)['nome'] for row in rows])
+
+@app.route('/index/all-testate-importanti', methods=["GET"])
+def get_all_testate_importanti():
+    rows = select_testate_importanti()
+    return flask.jsonify([dict(row)['nome'] for row in rows])
+
+@app.route('/index/search-rassegne', methods=["GET"])
+def search():
+    query = flask.request.args.get('q', '').strip()
+    if not query:
+        return flask.jsonify([])
+
+    # FTS5 usa una sintassi speciale — caratteri come ( ) " vanno escaped
+    # per evitare errori se l'utente digita qualcosa di strano
+    safe_query = query.replace('"', '""')
+
+    results = search_rassegne(f'"{safe_query}"')
+
+    return flask.jsonify(results)
 
 @app.route('/general/file', methods=["GET"])
 def get_file():

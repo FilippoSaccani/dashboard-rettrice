@@ -49,8 +49,6 @@ def save_pdf(file, data, new_filename):
 
         full_path = os.path.join(folder, new_filename)
 
-        print(full_path)
-
         # Controllo esplicito se il file esiste
         if os.path.exists(full_path):
             return False, "Questa rassegna è già stata inserita"
@@ -69,13 +67,16 @@ def delete_pdf(path):
     else:
         return False, "Errore nell'eliminazione del file"
 
-def extract_articles(filename, data):
+def extract_text(filename, data):
+    """Estrae il testo grezzo dal PDF."""
     text = ""
     folder = get_pdf_folder(data)
     with pdfplumber.open(os.path.join(folder, filename)) as pdf:
         for page in pdf.pages:
             text += page.extract_text() or ""
+    return text
 
+def extract_articles(text):
     # Splitta mantenendo i marcatori come delimitatori
     parts = re.split(r'(\[§\d+§])', text)
 
@@ -112,6 +113,22 @@ def extract_articles(filename, data):
 
     return results
 
+def clean_text(text: str) -> str:
+    # Rimuovi i marcatori univoci degli articoli
+    text = re.sub(r'\[§\d+§]', '', text)
+    # Rimuovi i boilerplate di riproduzione
+    text = re.sub(r'Riproduzione autorizzata licenza Ars Promopress[^\n]*', '', text)
+    text = re.sub(r'©?\s*RIPRODUZIONE RISERVATA[^\n]*', '', text)
+    # Rimuovi le righe con solo "Pagina X"
+    text = re.sub(r'(?m)^Pagina\s+\d+\s*$', '', text)
+    # Rimuovi date in testa alle pagine (es. "domenica 15 febbraio 2026")
+    text = re.sub(r'(?m)^(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)\s+\d{1,2}\s+\w+\s+\d{4}\s*$', '',
+                  text, flags=re.IGNORECASE)
+    # Rimuovi righe con solo numeri (numeri di pagina)
+    text = re.sub(r'(?m)^\s*\d+\s*$', '', text)
+
+    return text.strip()
+
 @timer
 def process_pdf(filename, data, status):
     path = get_pdf_folder(data)
@@ -119,14 +136,25 @@ def process_pdf(filename, data, status):
     sleep(0.3)
 
     try:
-        articles = extract_articles(filename, data)
+        text = extract_text(filename, data)
+        articles = extract_articles(text)
+
+        if len(articles) == 0:
+            print("File non valido")
+            status["done"] = True
+            status["error"] = True
+            delete_pdf(os.path.join(path, filename))
+
+            return False, "File non valido"
+
         temi = select_all_temi()
         temi = [r[0] for r in temi]
 
         testate = select_all_testate()
         testate = [row[0] for row in testate]
 
-        insert_rassegna(filename, data, len(articles))
+        ok, rassegna_id = insert_rassegna(filename, data, len(articles), clean_text(text))
+
         for article in articles:
             tema = article['tema'].strip()
             testata = article['testata'].strip()
@@ -157,7 +185,7 @@ def process_pdf(filename, data, status):
 
                 testate = select_all_testate()
 
-            ok, error = insert_articolo(filename, tema, testata)
+            ok, error = insert_articolo(rassegna_id, tema, testata)
 
             if not ok:
                 print("Database: ", error)
