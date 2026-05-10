@@ -42,6 +42,9 @@ def get_pdf_folder(data):
 
     return os.path.join('static/pdfs', str(data.year), mesi[data.month - 1])
 
+def get_pdf_name(giorno):
+    return 'Unimore' + giorno + ".pdf"
+
 def save_pdf(file, data, new_filename):
     try:
         folder = get_pdf_folder(data)

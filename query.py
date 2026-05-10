@@ -450,3 +450,34 @@ def search_rassegne(query: str, limit: int = 20) -> list[dict]:
         }
         for row in rows
     ]
+
+def controllo_testate():
+    conn = connect_db()
+    cur = conn.cursor()
+    rows = cur.execute('''
+        SELECT nome, importanza, fk_scala AS scala
+        FROM testata
+        WHERE verificata=0
+    ''').fetchall()
+    conn.close()
+    return rows
+
+def conferma_testata(dati):
+    conn = connect_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE testata SET verificata=1, importanza=?, fk_scala=? WHERE nome=?",
+            (dati['importanza'], dati['scala'], dati['nome'])
+        )
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        conn.rollback()
+        return False, f'Errore operativo: {e}'
+    except sqlite3.DatabaseError as e:
+        conn.rollback()
+        return False, f'Errore nel database: {e}'
+    finally:
+        conn.close()
+
+    return True, ''

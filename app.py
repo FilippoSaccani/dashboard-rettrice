@@ -1,3 +1,4 @@
+import json
 import threading
 import flask
 from flask import send_file
@@ -48,6 +49,19 @@ def send_form_social():
     except Exception as e:
         return "Errore nell'archiviazione dei dati", 400
 
+@app.route('/admin/testate', methods=["GET"])
+def get_controllo_testate():
+    rows = controllo_testate()
+    return flask.jsonify([dict(row) for row in rows])
+
+@app.route('/admin/conferma', methods=["PUT"])
+def conferma():
+    ok, error = conferma_testata(flask.request.json)
+    if not ok:
+        return error, 400
+    return '', 200
+
+
 @app.route('/social/<social_name>', methods=['GET'])
 def get_dati_social(social_name):
     rows = select_dati_social(social_name)
@@ -69,7 +83,7 @@ def send_form_rassegna():
         giorno = flask.request.form.get('giorno')
         data = get_date_from_formatted(giorno)
 
-        new_filename = 'Unimore'+giorno+".pdf"
+        new_filename = get_pdf_name(giorno)
 
         ok, error = save_pdf(file, data, new_filename)
 
@@ -107,7 +121,6 @@ def get_all_rassegne_per_scala():
 @app.route('/index/all-rassegne-per-testata', methods=["GET"])
 def get_all_rassegne_per_testata():
     rows = select_rassegne_per_testata()
-    print([json.loads(dict(row)['risultato']) for row in rows])
     return flask.jsonify([json.loads(dict(row)['risultato']) for row in rows])
 
 @app.route('/index/all-temi', methods=["GET"])
@@ -141,11 +154,11 @@ def search():
 
 @app.route('/general/file', methods=["GET"])
 def get_file():
-    filename = flask.request.args.get('filename')
-    data = get_date_from_formatted(flask.request.args.get('data'))
+    giorno = flask.request.args.get('data')
+    data = get_date_from_formatted(giorno)
+    filename = get_pdf_name(giorno)
 
     try:
-        print(data)
         path = os.path.join(get_pdf_folder(data), filename)
         return send_file(path, filename), 200
     except Exception as e:

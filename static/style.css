@@ -56,7 +56,8 @@ body, #root {
 .gap-2 { gap: 2rem; }
 
 /*Width*/
-.width-100 { width: 100%; }
+.width-100 { width: 100% }
+.width-25 { width: 25% }
 .width-50 { width: 50% }
 .width-66 { width: 66.6% }
 .width-80 { width: 80% }
@@ -78,6 +79,7 @@ input { color: var(--color-text-primary); }
 .color-white {color: var(--color-white)}
 
 .bg-main, .dropzone { background-color: var(--color-bg-main); }
+.bg-white {background-color: var(--color-white)}
 
 /*Padding*/
 .padding-05-1, input { padding: 0.5rem 1rem; }

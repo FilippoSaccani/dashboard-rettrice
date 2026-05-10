@@ -3,12 +3,14 @@ sudo tee /etc/systemd/system/dashboard.service > /dev/null <<EOF
 [Unit]
 Description=Dashboard Rettrice
 After=network.target ollama.service
+Requires=ollama.service
 
 [Service]
 User=webserver
 WorkingDirectory=/home/webserver/dashboard-rettrice
 ExecStart=/home/webserver/dashboard-rettrice/.venv/bin/gunicorn -w 2 -b 0.0.0.0:51852 app:app
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
