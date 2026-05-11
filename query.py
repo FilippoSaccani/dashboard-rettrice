@@ -457,7 +457,7 @@ def controllo_testate():
     rows = cur.execute('''
         SELECT nome, importanza, fk_scala AS scala
         FROM testata
-        WHERE verificata=0
+        ORDER BY nome COLLATE NOCASE
     ''').fetchall()
     conn.close()
     return rows
