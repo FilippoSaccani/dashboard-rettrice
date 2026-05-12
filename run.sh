@@ -18,4 +18,4 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable dashboard
-sudo systemctl start dashboard
+sudo systemctl restart dashboard

@@ -582,7 +582,7 @@
             return(
                 <div className="section flex-column gap-1 rounded transition shadow">
                     <div className="flex">
-                        <div className="flex flex-center">
+                        <div className="flex flex-center filter">
                             <SectionTitle title="Elimina gli ultimi dati caricati" i="fa-regular fa-pen-to-square"/>
                             {message && <p className="message">{message}</p>}
                             {error && <p className="error">{error}</p>}
@@ -645,34 +645,36 @@
 
                 return (
                     <div className="flex-center flex-between transition rounded width-100 bg-main padding-05-1">
-                        <div className="width-25">
-                            <p>{props.nome}</p>
-                        </div>
+                        <div className="flex-center flex-between width-80 filter">
+                            <div className="width-30">
+                                <p>{props.nome}</p>
+                            </div>
 
-                        <div className="width-25">
-                            {editing
-                                ? <select value={scala} onChange={e => setScala(e.target.value)} className="input rounded padding-05-1 bg-white">
-                                    <option value="Locale">Locale</option>
-                                    <option value="Nazionale">Nazionale</option>
-                                    <option value="Internazionale">Internazionale</option>
-                                  </select>
-                                : <p>{scala}</p>
-                            }
-                        </div>
+                            <div className="width-30">
+                                {editing
+                                    ? <select value={scala} onChange={e => setScala(e.target.value)} className="input rounded padding-05-1 bg-white">
+                                        <option value="Locale">Locale</option>
+                                        <option value="Nazionale">Nazionale</option>
+                                        <option value="Internazionale">Internazionale</option>
+                                      </select>
+                                    : <p>{scala}</p>
+                                }
+                            </div>
 
-                        <div className="width-25">
-                            {editing
-                                ? <input
-                                    type="number"
-                                    min="0"
-                                    max="10"
-                                    step="1"
-                                    value={importanza}
-                                    onChange={e => setImportanza(e.target.value)}
-                                    className="input rounded bg-white"
-                                  />
-                                : <p>{importanza}</p>
-                            }
+                            <div className="width-10">
+                                {editing
+                                    ? <input
+                                        type="number"
+                                        min="0"
+                                        max="10"
+                                        step="1"
+                                        value={importanza}
+                                        onChange={e => setImportanza(e.target.value)}
+                                        className="input rounded bg-white"
+                                      />
+                                    : <p>{importanza}</p>
+                                }
+                            </div>
                         </div>
 
                         <div className="flex">
@@ -1272,7 +1274,7 @@
                 <div className="width-fit flex-center color-white gap-1">
                     {!error && <i className="fa-solid fa-circle-notch icona-spin"></i>}
                     {!error && <h3>La rassegna stampa inserita è in fase di elaborazione . . .</h3>}
-                    {error && <i class="fa-solid fa-triangle-exclamation"></i>}
+                    {error && <i className="fa-solid fa-triangle-exclamation"></i>}
                     {error && <h3>Non è stato possibile processare la rassegna stampa, riprovare . . .</h3>}
                 </div>
             </div>
