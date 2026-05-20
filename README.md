@@ -105,24 +105,27 @@ Gestione completa dei dati:
 
 Per sistemi **Ubuntu / Debian**:
 
-Sono richiesti i pacchetti:
+Sono richiesti:
 
 - `python3.14` (o equivalente)
 - `python3.14-venv` (o equivalente)
+- `pip`
+
+Tutti gli script di installazione si trovano nella directory scripts/.
 
 ### Installazione Ollama
 
 ```shell
-./scripts/install_ollama.sh
+./install_ollama.sh
 ```
 
 ### Inizializzazione del server
 ```shell
-./scripts/init.sh
+./init.sh
 ```
 
 ### Avvio del server
 ```shell
-./scripts/run.sh <porta>
+./run.sh <porta>
 ```
 Se non si specifica una porta, il server utilizza la porta 51852.
