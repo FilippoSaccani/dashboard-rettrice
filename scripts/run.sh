@@ -1,4 +1,7 @@
-# /etc/systemd/system/dashboard.service
+#!/bin/bash
+
+PORT=${1:-51852}  # usa $1 se fornito, altrimenti 51852 come default
+
 sudo tee /etc/systemd/system/dashboard.service > /dev/null <<EOF
 [Unit]
 Description=Dashboard Rettrice
@@ -8,7 +11,8 @@ Requires=ollama.service
 [Service]
 User=webserver
 WorkingDirectory=/home/webserver/dashboard-rettrice
-ExecStart=/home/webserver/dashboard-rettrice/.venv/bin/gunicorn -w 2 -b 0.0.0.0:51852 app:app
+Environment="PORT=${PORT}"
+ExecStart=/home/webserver/dashboard-rettrice/.venv/bin/gunicorn -w 2 -b 0.0.0.0:${PORT} --log-level info app:app
 Restart=always
 RestartSec=5
 

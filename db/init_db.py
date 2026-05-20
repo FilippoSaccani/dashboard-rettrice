@@ -43,7 +43,6 @@ cursor.executescript('''
         verificata INTEGER NOT NULL DEFAULT 1,
         metodo_class TEXT NOT NULL DEFAULT 'manuale',
         confidence REAL NOT NULL DEFAULT 10,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         fk_scala TEXT NOT NULL,
         FOREIGN KEY (fk_scala) REFERENCES scala(nome)
     );

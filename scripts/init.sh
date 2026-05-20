@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sudo systemctl enable ollama
 sudo systemctl start ollama
 

@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import ollama
 import json
 import sqlite3
-from datetime import datetime
 
 # LIVELLO 1
 @dataclass
@@ -268,14 +267,13 @@ def get_or_classify_testata(testata_name: str, db_conn: sqlite3.Connection, save
     if save_if_new:
         db_conn.execute('''
                         INSERT OR IGNORE INTO testata
-                        (nome, fk_scala, importanza, verificata, metodo_class, created_at)
-                        VALUES (?, ?, ?, 0, ?, ?)
+                        (nome, fk_scala, importanza, verificata, metodo_class)
+                        VALUES (?, ?, ?, 0, ?)
                         ''', (
                             testata_name,
                             result.scala,
                             result.importanza,
                             result.metodo,
-                            datetime.now().isoformat(),
                         ))
         db_conn.commit()
 
